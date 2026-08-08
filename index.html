@@ -200,6 +200,7 @@
       <div class="field">
         <label>用車時間</label>
         <input type="time" id="f-time">
+        <div style="font-size:11px; color:var(--muted); margin-top:6px; line-height:1.5;">（接機，請輸入班機預計降落時間）</div>
       </div>
       <div class="error-text" id="err-1">請選擇日期與時間（日期需為今天以後）。</div>
     </div>
@@ -302,10 +303,17 @@
         <label>其他加購項目</label>
         <div class="pill-group" id="addonGroup"></div>
       </div>
+      <div class="subfield" id="signContentField">
+        <div class="field" style="margin-bottom:0;">
+          <label>舉牌內容</label>
+          <input type="text" id="f-signcontent" placeholder="請輸入舉牌上要顯示的姓名或文字，例如：王小明">
+        </div>
+      </div>
       <div class="field" style="margin-bottom:0;">
         <label>免費偏好設定</label>
         <div class="pill-group" id="addonFreeGroup"></div>
       </div>
+      <div class="error-text" id="err-6">已選擇舉牌接機，請輸入舉牌內容。</div>
     </div>
 
     <!-- STEP 7: review -->
@@ -871,7 +879,7 @@
     pickupType:"", pAirport:"桃園國際機場", pTerminal:"第一航廈", pFlight:"", pCity:"", pDistrict:"", pLandmark:"", pAddress:"",
     dropoffType:"", dAirport:"桃園國際機場", dTerminal:"第一航廈", dFlight:"", dCity:"", dDistrict:"", dLandmark:"", dAddress:"",
     pax:"", luggage:{},
-    vehicleType:"", addons:{}, addonQty:{}, price:0
+    vehicleType:"", addons:{}, addonQty:{}, signContent:"", price:0
   };
   LUGGAGE_SIZES.forEach(s=>formData.luggage[s]=0);
   ADDONS_PAID.concat(ADDONS_FREE).forEach(a=>formData.addons[a.id]=false);
@@ -1069,6 +1077,16 @@
     const id = pill.dataset.id;
     formData.addons[id] = !formData.addons[id];
     pill.classList.toggle('selected', formData.addons[id]);
+    if(id === 'sign'){
+      const field = document.getElementById('signContentField');
+      field.classList.toggle('show', formData.addons.sign);
+      if(!formData.addons.sign){
+        formData.signContent = '';
+        const input = document.getElementById('f-signcontent');
+        if(input) input.value = '';
+        showError(6, false);
+      }
+    }
   }
   addonGroup.addEventListener('click', toggleAddon);
   addonFreeGroup.addEventListener('click', toggleAddon);
@@ -1086,7 +1104,11 @@
     });
     ADDONS_PAID.concat(ADDONS_FREE).filter(a=>formData.addons[a.id]).forEach(a=>{
       const paid = ADDONS_PAID.find(p=>p.id===a.id);
-      parts.push(paid ? a.name+'(+'+paid.price+')' : a.name);
+      let label = paid ? a.name+'(+'+paid.price+')' : a.name;
+      if(a.id === 'sign' && formData.signContent){
+        label += '｜舉牌內容：' + formData.signContent;
+      }
+      parts.push(label);
     });
     return parts.length ? parts.join('、') : '無';
   }
@@ -1150,6 +1172,11 @@
     if(step===5){
       const ok = !!formData.vehicleType;
       showError(5, !ok); return ok;
+    }
+    if(step===6){
+      formData.signContent = document.getElementById('f-signcontent') ? document.getElementById('f-signcontent').value.trim() : '';
+      const ok = !formData.addons.sign || formData.signContent.length>0;
+      showError(6, !ok); return ok;
     }
     return true;
   }
