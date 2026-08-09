@@ -1277,20 +1277,21 @@
     }
     return {
       type: "box",
-      layout: "vertical",
+      layout: "horizontal",
       spacing: "sm",
       contents: [
-        { type:"text", text:"附加服務", color:"#8B94A7", size:"sm" },
+        { type:"text", text:"附加服務", color:"#8B94A7", size:"sm", flex:2 },
         {
           type: "box",
           layout: "vertical",
           spacing: "xs",
-          margin: "sm",
+          flex: 5,
           contents: items.map(t => ({
             type: "text",
-            text: "・" + t,
+            text: t,
             color: "#EDEFF5",
             size: "sm",
+            align: "end",
             wrap: true
           }))
         }
