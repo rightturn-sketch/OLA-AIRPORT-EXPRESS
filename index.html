@@ -343,6 +343,7 @@
             <div class="pass-item"><div class="k">PAX 人數</div><div class="v mono" id="pass-pax">—</div></div>
             <div class="pass-item full"><div class="k">BAGGAGE 行李</div><div class="v" id="pass-baggage">—</div></div>
             <div class="pass-item full"><div class="k">ADD-ONS 附加服務</div><div class="v" id="pass-addons">—</div></div>
+            <div class="pass-item full" id="pass-signcontent-wrap" style="display:none;"><div class="k">SIGN 舉牌內容</div><div class="v" id="pass-signcontent">—</div></div>
           </div>
         </div>
         <div class="pass-tear"></div>
@@ -1105,15 +1106,15 @@
     ADDONS_PAID.concat(ADDONS_FREE).filter(a=>formData.addons[a.id]).forEach(a=>{
       const paid = ADDONS_PAID.find(p=>p.id===a.id);
       parts.push(paid ? a.name+'(+'+paid.price+')' : a.name);
-      if(a.id === 'sign' && formData.signContent){
-        parts.push('舉牌內容：' + formData.signContent);
-      }
     });
     return parts;
   }
   function addonsText(){
     const parts = addonsList();
     return parts.length ? parts.join('、') : '無';
+  }
+  function signContentLine(){
+    return (formData.addons.sign && formData.signContent) ? formData.signContent : '';
   }
 
   function showError(step, show){
@@ -1223,6 +1224,9 @@
     document.getElementById('pass-baggage').textContent = luggageTotal()+' 件（'+luggageText()+'）';
     const addons = addonsList();
     document.getElementById('pass-addons').innerHTML = addons.length ? addons.join('<br>') : '無';
+    const signContent = signContentLine();
+    document.getElementById('pass-signcontent-wrap').style.display = signContent ? '' : 'none';
+    document.getElementById('pass-signcontent').textContent = signContent || '—';
   }
 
   const VEHICLE_LABELS = {
@@ -1322,7 +1326,13 @@
       flexRow("人數", (formData.pax || 1) + " 人"),
       flexRow("行李", luggageTotal() + " 件（" + luggageText() + "）"),
       flexRow("車輛類型", vehicleLabel),
-      flexAddonsSection(addonsList()),
+      flexAddonsSection(addonsList())
+    );
+    const signContent = signContentLine();
+    if (signContent) {
+      bodyContents.push(flexRow("舉牌內容", signContent));
+    }
+    bodyContents.push(
       flexSeparator(),
       flexRow("車資", "請洽客服報價", { highlight: true })
     );
@@ -1397,6 +1407,10 @@
       addons.forEach(a => lines.push("　・" + a));
     } else {
       lines.push("附加服務：無");
+    }
+    const signContent = signContentLine();
+    if (signContent) {
+      lines.push("舉牌內容：" + signContent);
     }
     lines.push(
       "——————————",
