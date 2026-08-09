@@ -1451,14 +1451,28 @@
     setTimeout(()=>toast.classList.remove('show'), 2000);
   }
 
-  (function init(){
-    if (typeof liff !== 'undefined') {
-      liff.init({ liffId: "2011008852-K4WRXVpT" }).catch(err => console.error("LIFF 初始化失敗", err));
+    async function init(){
+    try {
+      if (typeof liff !== 'undefined') {
+        await liff.init({ liffId: "2011008852-K4WRXVpT" });
+        if (!liff.isLoggedIn()) {
+          liff.login();
+        } else {
+          const profile = await liff.getProfile();
+          window.userLineId = profile.userId;
+        }
+      }
+    } catch (err) {
+      console.error("LIFF 初始化或取得 ID 失敗", err);
     }
     const today = new Date().toISOString().split('T')[0];
-    document.getElementById('f-date').min = today;
+    const dateInput = document.getElementById('f-date');
+    if (dateInput) dateInput.min = today;
     showStep(0);
-  })();
+  }
+
+  init();
+
 
 </script>
 </body>
