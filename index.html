@@ -202,7 +202,29 @@
         <input type="time" id="f-time">
         <div style="font-size:11px; color:var(--muted); margin-top:6px; line-height:1.5;">（接機，請輸入班機預計降落時間）</div>
       </div>
-      <div class="error-text" id="err-1">請選擇日期與時間（日期需為今天以後）。</div>
+      <div class="field" style="margin-bottom:0;">
+        <label>行程方式</label>
+        <div class="pill-group" id="tripDirectionGroup">
+          <div class="pill selected" data-value="oneway">單程</div>
+          <div class="pill" data-value="roundtrip">來回（一次填單，回程一起送出）</div>
+        </div>
+      </div>
+      <div class="subfield" id="returnTripFields">
+        <div class="field" style="margin-bottom:12px;">
+          <label>回程日期</label>
+          <input type="date" id="f-return-date">
+        </div>
+        <div class="field" style="margin-bottom:12px;">
+          <label>回程時間</label>
+          <input type="time" id="f-return-time">
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>回程航班編號（選填）</label>
+          <input type="text" id="f-return-flight" placeholder="例如 CI102">
+        </div>
+        <div style="font-size:11px; color:var(--muted); margin-top:10px; line-height:1.6;">回程將自動沿用您接下來填寫的上／下車地點（方向對調），不需重複填寫。</div>
+      </div>
+      <div class="error-text" id="err-1">請選擇日期與時間（日期需為今天以後），若選擇來回請完整填寫回程日期與時間（需不早於去程）。</div>
     </div>
 
     <!-- STEP 2: pickup location -->
@@ -344,6 +366,25 @@
             <div class="pass-item full"><div class="k">BAGGAGE 行李</div><div class="v" id="pass-baggage">—</div></div>
             <div class="pass-item full"><div class="k">ADD-ONS 附加服務</div><div class="v" id="pass-addons">—</div></div>
             <div class="pass-item full" id="pass-signcontent-wrap" style="display:none;"><div class="k">SIGN 舉牌內容</div><div class="v" id="pass-signcontent">—</div></div>
+          </div>
+        </div>
+        <div class="pass-tear" id="pass-return-tear" style="display:none;"></div>
+        <div class="pass-top" id="pass-return-section" style="display:none; padding-top:14px;">
+          <div class="pass-route">
+            <div>
+              <div class="airport" id="pass-return-from">—</div>
+              <div class="sub">回程上車 RETURN PICK-UP</div>
+            </div>
+            <div class="plane">✈</div>
+            <div class="dest">
+              <div class="airport" id="pass-return-to">—</div>
+              <div class="sub">回程下車 RETURN DROP-OFF</div>
+            </div>
+          </div>
+          <div class="pass-grid">
+            <div class="pass-item"><div class="k">RETURN DATE 回程日期</div><div class="v mono" id="pass-return-date">—</div></div>
+            <div class="pass-item"><div class="k">RETURN TIME 回程時間</div><div class="v mono" id="pass-return-time">—</div></div>
+            <div class="pass-item full" id="pass-return-flight-row"><div class="k">RETURN FLIGHT 回程航班</div><div class="v mono" id="pass-return-flight">—</div></div>
           </div>
         </div>
         <div class="pass-tear"></div>
@@ -877,6 +918,7 @@
 
   const formData = {
     name:"", phone:"", date:"", time:"",
+    roundTrip:false, returnDate:"", returnTime:"", returnFlight:"",
     pickupType:"", pAirport:"桃園國際機場", pTerminal:"第一航廈", pFlight:"", pCity:"", pDistrict:"", pLandmark:"", pAddress:"",
     dropoffType:"", dAirport:"桃園國際機場", dTerminal:"第一航廈", dFlight:"", dCity:"", dDistrict:"", dLandmark:"", dAddress:"",
     pax:"", luggage:{},
@@ -960,6 +1002,15 @@
   buildAirportPicker('p');
   buildAirportPicker('d');
 
+  document.getElementById('tripDirectionGroup').addEventListener('click', e=>{
+    const pill = e.target.closest('.pill');
+    if(!pill) return;
+    document.querySelectorAll('#tripDirectionGroup .pill').forEach(p=>p.classList.remove('selected'));
+    pill.classList.add('selected');
+    formData.roundTrip = pill.dataset.value === 'roundtrip';
+    document.getElementById('returnTripFields').classList.toggle('show', formData.roundTrip);
+  });
+
   document.getElementById('pickupTypeGroup').addEventListener('click', e=>{
     const pill = e.target.closest('.pill');
     if(!pill) return;
@@ -1023,6 +1074,26 @@
       return { tripType:'送機', city:formData.pCity, district:formData.pDistrict, airport:formData.dAirport };
     }
     return null;
+  }
+  // ---------- 來回接送：回程方向為去程的反向，沿用同一組地點資料 ----------
+  function getReturnTripContext(){
+    const ctx = getTripContext();
+    if(!ctx) return null;
+    return { tripType: ctx.tripType==='接機' ? '送機' : '接機', city:ctx.city, district:ctx.district, airport:ctx.airport };
+  }
+  function returnPickupText(){
+    const ctx = getTripContext();
+    if(!ctx) return '—';
+    return ctx.tripType === '接機'
+      ? shortLocation('d', 'custom')
+      : shortLocation('d', 'airport', formData.dTerminal, formData.dAirport);
+  }
+  function returnDropoffText(){
+    const ctx = getTripContext();
+    if(!ctx) return '—';
+    return ctx.tripType === '接機'
+      ? shortLocation('p', 'airport', formData.pTerminal, formData.pAirport)
+      : shortLocation('p', 'custom');
   }
   function selectVehicleType(type){
     formData.vehicleType = type;
@@ -1138,7 +1209,15 @@
     if(step===1){
       formData.date = document.getElementById('f-date').value;
       formData.time = document.getElementById('f-time').value;
-      const ok = !!formData.date && !!formData.time;
+      let ok = !!formData.date && !!formData.time;
+      if(ok && formData.roundTrip){
+        formData.returnDate = document.getElementById('f-return-date').value;
+        formData.returnTime = document.getElementById('f-return-time').value;
+        formData.returnFlight = document.getElementById('f-return-flight').value.trim();
+        const hasReturn = !!formData.returnDate && !!formData.returnTime;
+        const notEarlier = hasReturn && (formData.returnDate > formData.date || (formData.returnDate === formData.date && formData.returnTime >= formData.time));
+        ok = hasReturn && notEarlier;
+      }
       showError(1, !ok); return ok;
     }
     if(step===2){
@@ -1227,6 +1306,27 @@
     const signContent = signContentLine();
     document.getElementById('pass-signcontent-wrap').style.display = signContent ? '' : 'none';
     document.getElementById('pass-signcontent').textContent = signContent || '—';
+
+    const returnTear = document.getElementById('pass-return-tear');
+    const returnSection = document.getElementById('pass-return-section');
+    if(formData.roundTrip){
+      returnTear.style.display = '';
+      returnSection.style.display = '';
+      document.getElementById('pass-return-from').textContent = returnPickupText();
+      document.getElementById('pass-return-to').textContent = returnDropoffText();
+      document.getElementById('pass-return-date').textContent = formData.returnDate || '—';
+      document.getElementById('pass-return-time').textContent = formData.returnTime || '—';
+      const flightRow = document.getElementById('pass-return-flight-row');
+      if(formData.returnFlight){
+        flightRow.style.display = '';
+        document.getElementById('pass-return-flight').textContent = formData.returnFlight;
+      } else {
+        flightRow.style.display = 'none';
+      }
+    } else {
+      returnTear.style.display = 'none';
+      returnSection.style.display = 'none';
+    }
   }
 
   const VEHICLE_LABELS = {
@@ -1300,47 +1400,72 @@
   }
 
   function buildFlexMessage(){
-    const pickupText = shortLocation('p', formData.pickupType, formData.pTerminal, formData.pAirport);
-    const dropoffText = shortLocation('d', formData.dropoffType, formData.dTerminal, formData.dAirport);
     const vehicleLabel = VEHICLE_LABELS[formData.vehicleType] || formData.vehicleType || '未選擇';
-    const flightNo = formData.pickupType === 'airport' ? formData.pFlight
-                    : formData.dropoffType === 'airport' ? formData.dFlight
-                    : '';
     const trip = getTripContext();
     const tripLabel = trip ? trip.tripType : '定點接送';
 
     const bodyContents = [
       flexRow("姓名", formData.name),
       flexRow("電話", formData.phone),
-      flexRow("用車時間", (formData.date || '') + ' ' + (formData.time || '')),
-      flexSeparator(),
-      flexRow("上車", pickupText),
-      flexRow("下車", dropoffText)
-    ];
-
-    if (flightNo) {
-      bodyContents.push(flexRow("航班編號", flightNo));
-    }
-
-    bodyContents.push(
-      flexSeparator(),
       flexRow("人數", (formData.pax || 1) + " 人"),
       flexRow("行李", luggageTotal() + " 件（" + luggageText() + "）"),
       flexRow("車輛類型", vehicleLabel),
       flexAddonsSection(addonsList())
-    );
+    ];
     const signContent = signContentLine();
     if (signContent) {
       bodyContents.push(flexRow("舉牌內容", signContent));
     }
-    bodyContents.push(
-      flexSeparator(),
-      flexRow("車資", "請洽客服報價", { highlight: true })
-    );
+
+    if (formData.roundTrip) {
+      const pickupText = shortLocation('p', formData.pickupType, formData.pTerminal, formData.pAirport);
+      const dropoffText = shortLocation('d', formData.dropoffType, formData.dTerminal, formData.dAirport);
+      const outboundAirportSide = formData.pickupType === 'airport' ? 'pickup' : 'dropoff';
+      const outboundFlight = outboundAirportSide === 'pickup' ? formData.pFlight : formData.dFlight;
+      const returnCtx = getReturnTripContext();
+      const returnAirportSide = outboundAirportSide === 'pickup' ? 'dropoff' : 'pickup';
+
+      bodyContents.push(
+        flexSeparator(),
+        { type:"text", text:"▍去程" + (trip ? '（' + trip.tripType + '）' : ''), weight:"bold", size:"sm", color:"#FFB454", margin:"sm" },
+        flexRow("用車", (formData.date || '') + ' ' + (formData.time || '')),
+        flexRow("上車", pickupText + (outboundAirportSide === 'pickup' && outboundFlight ? '（航班 ' + outboundFlight + '）' : '')),
+        flexRow("下車", dropoffText + (outboundAirportSide === 'dropoff' && outboundFlight ? '（航班 ' + outboundFlight + '）' : ''))
+      );
+
+      bodyContents.push(
+        flexSeparator(),
+        { type:"text", text:"▍回程" + (returnCtx ? '（' + returnCtx.tripType + '）' : ''), weight:"bold", size:"sm", color:"#2DD4BF", margin:"sm" },
+        flexRow("用車", (formData.returnDate || '') + ' ' + (formData.returnTime || '')),
+        flexRow("上車", returnPickupText() + (returnAirportSide === 'pickup' && formData.returnFlight ? '（航班 ' + formData.returnFlight + '）' : '')),
+        flexRow("下車", returnDropoffText() + (returnAirportSide === 'dropoff' && formData.returnFlight ? '（航班 ' + formData.returnFlight + '）' : ''))
+      );
+
+      bodyContents.push(
+        flexSeparator(),
+        flexRow("去程／回程車資", "請洽客服報價", { highlight: true })
+      );
+    } else {
+      const pickupText = shortLocation('p', formData.pickupType, formData.pTerminal, formData.pAirport);
+      const dropoffText = shortLocation('d', formData.dropoffType, formData.dTerminal, formData.dAirport);
+      const flightNo = formData.pickupType === 'airport' ? formData.pFlight
+                      : formData.dropoffType === 'airport' ? formData.dFlight
+                      : '';
+      bodyContents.push(
+        flexSeparator(),
+        flexRow("用車時間", (formData.date || '') + ' ' + (formData.time || '')),
+        flexRow("上車", pickupText),
+        flexRow("下車", dropoffText + (flightNo ? '（航班 ' + flightNo + '）' : ''))
+      );
+      bodyContents.push(
+        flexSeparator(),
+        flexRow("車資", "請洽客服報價", { highlight: true })
+      );
+    }
 
     return {
       type: "flex",
-      altText: "機場接送預約｜" + (formData.name || '') + '｜' + (formData.date || '') + ' ' + (formData.time || ''),
+      altText: "機場接送預約" + (formData.roundTrip ? '・來回' : '') + "｜" + (formData.name || '') + '｜' + (formData.date || '') + ' ' + (formData.time || ''),
       contents: {
         type: "bubble",
         header: {
@@ -1349,7 +1474,7 @@
           backgroundColor: "#FFB454",
           paddingAll: "20px",
           contents: [
-            { type:"text", text:"機場接送預約", weight:"bold", size:"xl", color:"#1A1300" },
+            { type:"text", text:"機場接送預約" + (formData.roundTrip ? '（來回）' : ''), weight:"bold", size:"xl", color:"#1A1300" },
             { type:"text", text: tripLabel, size:"sm", color:"#5C4212", margin:"sm" }
           ]
         },
@@ -1377,31 +1502,16 @@
 
   // 純文字版本保留給「複製文字」按鈕與非 LIFF 環境的分享視窗使用
   function buildMessage(){
-    const pickupText = shortLocation('p', formData.pickupType, formData.pTerminal, formData.pAirport);
-    const dropoffText = shortLocation('d', formData.dropoffType, formData.dTerminal, formData.dAirport);
     const vehicleLabel = VEHICLE_LABELS[formData.vehicleType] || formData.vehicleType || '未選擇';
-
-    // 依上/下車類型判斷該顯示哪一邊的航班號碼
-    const flightNo = formData.pickupType === 'airport' ? formData.pFlight
-                    : formData.dropoffType === 'airport' ? formData.dFlight
-                    : '';
+    const tripCtx = getTripContext();
 
     const lines = [
-      "【機場接送預約】",
+      "【機場接送預約" + (formData.roundTrip ? '・來回' : '') + "】",
       "姓名：" + (formData.name || ''),
       "電話：" + (formData.phone || ''),
-      "用車：" + (formData.date || '') + ' ' + (formData.time || ''),
       "人數：" + (formData.pax || 1) + " 人 | 行李：" + luggageTotal() + " 件（" + luggageText() + "）",
-      "行程：" + (getTripContext() ? getTripContext().tripType : '—'),
-      "上車：" + pickupText,
-      "下車：" + dropoffText
+      "車輛類型：" + vehicleLabel
     ];
-
-    if (flightNo) {
-      lines.push("航班編號：" + flightNo);
-    }
-
-    lines.push("車輛類型：" + vehicleLabel);
     const addons = addonsList();
     if(addons.length){
       lines.push("附加服務：");
@@ -1413,6 +1523,42 @@
     if (signContent) {
       lines.push("舉牌內容：" + signContent);
     }
+    lines.push("");
+
+    if (formData.roundTrip) {
+      const pickupText = shortLocation('p', formData.pickupType, formData.pTerminal, formData.pAirport);
+      const dropoffText = shortLocation('d', formData.dropoffType, formData.dTerminal, formData.dAirport);
+      const outboundAirportSide = formData.pickupType === 'airport' ? 'pickup' : 'dropoff';
+      const outboundFlight = outboundAirportSide === 'pickup' ? formData.pFlight : formData.dFlight;
+      const returnCtx = getReturnTripContext();
+      const returnAirportSide = outboundAirportSide === 'pickup' ? 'dropoff' : 'pickup';
+
+      lines.push("▍去程" + (tripCtx ? '（' + tripCtx.tripType + '）' : ''));
+      lines.push("用車：" + (formData.date || '') + ' ' + (formData.time || ''));
+      lines.push("上車：" + pickupText + (outboundAirportSide === 'pickup' && outboundFlight ? '（航班 ' + outboundFlight + '）' : ''));
+      lines.push("下車：" + dropoffText + (outboundAirportSide === 'dropoff' && outboundFlight ? '（航班 ' + outboundFlight + '）' : ''));
+      lines.push("");
+
+      lines.push("▍回程" + (returnCtx ? '（' + returnCtx.tripType + '）' : ''));
+      lines.push("用車：" + (formData.returnDate || '') + ' ' + (formData.returnTime || ''));
+      lines.push("上車：" + returnPickupText() + (returnAirportSide === 'pickup' && formData.returnFlight ? '（航班 ' + formData.returnFlight + '）' : ''));
+      lines.push("下車：" + returnDropoffText() + (returnAirportSide === 'dropoff' && formData.returnFlight ? '（航班 ' + formData.returnFlight + '）' : ''));
+      lines.push("");
+      lines.push("去程／回程車資：請洽客服報價");
+    } else {
+      const pickupText = shortLocation('p', formData.pickupType, formData.pTerminal, formData.pAirport);
+      const dropoffText = shortLocation('d', formData.dropoffType, formData.dTerminal, formData.dAirport);
+      const flightNo = formData.pickupType === 'airport' ? formData.pFlight
+                      : formData.dropoffType === 'airport' ? formData.dFlight
+                      : '';
+      lines.push("用車：" + (formData.date || '') + ' ' + (formData.time || ''));
+      lines.push("行程：" + (tripCtx ? tripCtx.tripType : '—'));
+      lines.push("上車：" + pickupText);
+      lines.push("下車：" + dropoffText + (flightNo ? '（航班 ' + flightNo + '）' : ''));
+      lines.push("");
+      lines.push("車資：請洽客服報價");
+    }
+
     lines.push(
       "——————————",
       "由機場接送預約系統送出"
@@ -1467,7 +1613,16 @@
     }
     const today = new Date().toISOString().split('T')[0];
     const dateInput = document.getElementById('f-date');
+    const returnDateInput = document.getElementById('f-return-date');
     if (dateInput) dateInput.min = today;
+    if (returnDateInput) {
+      returnDateInput.min = today;
+      if (dateInput) {
+        dateInput.addEventListener('change', ()=>{
+          if(dateInput.value) returnDateInput.min = dateInput.value;
+        });
+      }
+    }
     showStep(0);
   }
 
