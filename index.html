@@ -1224,11 +1224,10 @@
     const parts = [];
     ADDONS_STEPPER.forEach(a=>{
       const qty = formData.addonQty[a.id]||0;
-      if(qty>0) parts.push(a.name+' '+a.nameEn+' x'+qty+'(+'+(qty*a.price)+')');
+      if(qty>0) parts.push(a.name+' '+a.nameEn+' x'+qty);
     });
     ADDONS_PAID.concat(ADDONS_FREE).filter(a=>formData.addons[a.id]).forEach(a=>{
-      const paid = ADDONS_PAID.find(p=>p.id===a.id);
-      parts.push(paid ? a.name+' '+a.nameEn+'(+'+paid.price+')' : a.name+' '+a.nameEn);
+      parts.push(a.name+' '+a.nameEn);
     });
     return parts;
   }
@@ -1236,11 +1235,10 @@
     const parts = [];
     ADDONS_STEPPER.forEach(a=>{
       const qty = formData.addonQty[a.id]||0;
-      if(qty>0) parts.push(a.name+' x'+qty+'(+'+(qty*a.price)+')');
+      if(qty>0) parts.push(a.name+' x'+qty);
     });
     ADDONS_PAID.concat(ADDONS_FREE).filter(a=>formData.addons[a.id]).forEach(a=>{
-      const paid = ADDONS_PAID.find(p=>p.id===a.id);
-      parts.push(paid ? a.name+'(+'+paid.price+')' : a.name);
+      parts.push(a.name);
     });
     return parts;
   }
@@ -1459,9 +1457,9 @@
       layout: "horizontal",
       spacing: "sm",
       contents: [
-        { type:"text", text: label, color:"#8B94A7", size:"sm", flex:2, wrap:true },
+        { type:"text", text: label, color:"#8B94A7", size:"xs", flex:2, wrap:true },
         { type:"text", text: (value || '—'), color: opts.highlight ? "#FFB454" : "#EDEFF5",
-          size:"sm", flex:5, align:"end", wrap:true, weight: opts.highlight ? "bold" : "regular" }
+          size:"xs", flex:3, align:"end", wrap:true, weight: opts.highlight ? "bold" : "regular" }
       ]
     };
   }
@@ -1507,13 +1505,12 @@
       flexRow("電話", formData.phone),
       flexRow("人數", (formData.pax || 1) + " 人"),
       flexRow("行李", luggageTotal() + " 件（" + luggageText() + "）"),
-      flexRow("車輛類型", vehicleLabel),
-      flexAddonsSection(addonsListZh())
+      flexRow("車輛類型", vehicleLabel)
     ];
+    const addonsLine = addonsListZh().join('、');
+    if (addonsLine) bodyContents.push(flexRow("附加服務", addonsLine));
     const signContent = signContentLine();
-    if (signContent) {
-      bodyContents.push(flexRow("舉牌內容", signContent));
-    }
+    if (signContent) bodyContents.push(flexRow("舉牌內容", signContent));
 
     if (formData.roundTrip) {
       const pickupText = shortLocation('p', formData.pickupType, formData.pTerminal, formData.pAirport);
@@ -1525,29 +1522,31 @@
 
       bodyContents.push(
         flexSeparator(),
-        { type:"text", text:"▍去程" + (trip ? '（' + trip.tripType + '）' : ''), weight:"bold", size:"sm", color:"#FFB454", margin:"sm", wrap:true },
+        { type:"text", text:"▍去程" + (trip ? '（' + trip.tripType + '）' : ''), weight:"bold", size:"sm", color:"#FFB454", margin:"md", wrap:true },
         flexRow("日期／時間", (formData.date || '') + ' ' + (formData.time || '')),
         flexRow("上車 Pick-up", pickupText + (outboundAirportSide === 'pickup' && outboundFlight ? '（航班 ' + outboundFlight + '）' : ''))
       );
       if (formData.waypoint) bodyContents.push(flexRow("中途 Stop-over", formData.waypoint));
       bodyContents.push(
-        flexRow("下車 Drop-off", dropoffText + (outboundAirportSide === 'dropoff' && outboundFlight ? '（航班 ' + outboundFlight + '）' : ''))
+        flexRow("下車 Drop-off", dropoffText + (outboundAirportSide === 'dropoff' && outboundFlight ? '（航班 ' + outboundFlight + '）' : '')),
+        flexRow("去程車資", "請洽客服報價")
       );
 
       bodyContents.push(
         flexSeparator(),
-        { type:"text", text:"▍回程" + (returnCtx ? '（' + returnCtx.tripType + '）' : ''), weight:"bold", size:"sm", color:"#2DD4BF", margin:"sm", wrap:true },
+        { type:"text", text:"▍回程" + (returnCtx ? '（' + returnCtx.tripType + '）' : ''), weight:"bold", size:"sm", color:"#2DD4BF", margin:"md", wrap:true },
         flexRow("日期／時間", (formData.returnDate || '') + ' ' + (formData.returnTime || '')),
         flexRow("上車 Pick-up", returnPickupText() + (returnAirportSide === 'pickup' && formData.returnFlight ? '（航班 ' + formData.returnFlight + '）' : ''))
       );
       if (formData.returnWaypoint) bodyContents.push(flexRow("中途 Stop-over", formData.returnWaypoint));
       bodyContents.push(
-        flexRow("下車 Drop-off", returnDropoffText() + (returnAirportSide === 'dropoff' && formData.returnFlight ? '（航班 ' + formData.returnFlight + '）' : ''))
+        flexRow("下車 Drop-off", returnDropoffText() + (returnAirportSide === 'dropoff' && formData.returnFlight ? '（航班 ' + formData.returnFlight + '）' : '')),
+        flexRow("回程車資", "請洽客服報價")
       );
 
       bodyContents.push(
         flexSeparator(),
-        flexRow("去程／回程車資", "請洽客服報價", { highlight: true })
+        flexRow("來回預估總價", "請洽客服報價", { highlight: true })
       );
     } else {
       const pickupText = shortLocation('p', formData.pickupType, formData.pTerminal, formData.pAirport);
@@ -1558,6 +1557,7 @@
       bodyContents.push(
         flexSeparator(),
         flexRow("日期／時間", (formData.date || '') + ' ' + (formData.time || '')),
+        flexRow("行程類型", tripLabel),
         flexRow("上車 Pick-up", pickupText)
       );
       if (formData.waypoint) bodyContents.push(flexRow("中途 Stop-over", formData.waypoint));
@@ -1566,7 +1566,7 @@
       );
       bodyContents.push(
         flexSeparator(),
-        flexRow("車資", "請洽客服報價", { highlight: true })
+        flexRow("預估價格", "請洽客服報價", { highlight: true })
       );
     }
 
@@ -1579,28 +1579,30 @@
           type: "box",
           layout: "vertical",
           backgroundColor: "#FFB454",
-          paddingAll: "20px",
+          paddingAll: "16px",
           contents: [
-            { type:"text", text:"機場接送預約" + (formData.roundTrip ? '（來回）' : ''), weight:"bold", size:"xl", color:"#1A1300", wrap:true },
-            { type:"text", text: tripLabel, size:"sm", color:"#5C4212", margin:"sm", wrap:true }
+            { type:"text", text:"機場接送預約" + (formData.roundTrip ? '（來回）' : ''), weight:"bold", size:"lg", color:"#1A1300", wrap:true },
+            { type:"text", text: tripLabel, size:"sm", color:"#1A1300", margin:"xs", wrap:true }
           ]
         },
         body: {
           type: "box",
           layout: "vertical",
           backgroundColor: "#111C30",
-          paddingAll: "20px",
+          paddingAll: "16px",
           spacing: "md",
           contents: bodyContents
         },
         footer: {
           type: "box",
           layout: "vertical",
-          backgroundColor: "#111C30",
-          paddingAll: "16px",
+          backgroundColor: "#0B1220",
+          paddingAll: "14px",
+          spacing: "xs",
           contents: [
+            { type:"text", text:"＊實際車資將由客服人員確認後回覆", size:"xxs", color:"#5C6478", wrap:true, margin:"md" },
             flexSeparator(),
-            { type:"text", text:"由機場接送預約系統送出", size:"xxs", color:"#8B94A7", align:"center", margin:"lg", wrap:true }
+            { type:"text", text:"由機場接送預約系統送出", size:"xxs", color:"#5C6478", align:"center", margin:"md", wrap:true }
           ]
         }
       }
