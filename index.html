@@ -180,16 +180,15 @@
 
   <div class="progress-wrap">
     <div class="progress-track" id="progressTrack"></div>
-    <div class="progress-label"><span id="stepIndex">01</span> / 08　<span id="stepName">聯絡資訊</span></div>
+    <div class="progress-label"><span id="stepIndex">01</span> / 04　<span id="stepName">聯絡與時間</span></div>
   </div>
 
   <div class="card">
-
-    <!-- STEP 0: contact -->
+    <!-- STEP 0: contact + date/time -->
     <div class="step active" data-step="0">
       <div class="step-eyebrow">STEP 01</div>
-      <div class="step-title">聯絡資訊</div>
-      <div class="step-title-en">Contact Information</div>
+      <div class="step-title">聯絡資訊與用車時間</div>
+      <div class="step-title-en">Contact &amp; Travel Time</div>
       <div class="field">
         <label>姓名<span class="en">Full Name</span></label>
         <input type="text" id="f-name" placeholder="請輸入乘客姓名 / Enter passenger's full name">
@@ -198,14 +197,6 @@
         <label>聯絡電話<span class="en">Phone Number</span></label>
         <input type="tel" id="f-phone" placeholder="請輸入手機號碼 / Enter phone number, e.g. 0912345678">
       </div>
-      <div class="error-text" id="err-0">請完整填寫姓名與電話（電話至少 8 碼）。<span class="en">Please enter your name and phone number (at least 8 digits).</span></div>
-    </div>
-
-    <!-- STEP 1: date/time -->
-    <div class="step" data-step="1">
-      <div class="step-eyebrow">STEP 02</div>
-      <div class="step-title">用車日期與時間</div>
-      <div class="step-title-en">Travel Date &amp; Time</div>
       <div class="field">
         <label>用車日期<span class="en">Travel Date</span></label>
         <input type="date" id="f-date">
@@ -237,14 +228,13 @@
         </div>
         <div style="font-size:11px; color:var(--muted); margin-top:10px; line-height:1.6;">回程將自動沿用您接下來填寫的上／下車地點（方向對調），不需重複填寫。<br>Your return trip will automatically reuse the pick-up/drop-off locations you enter next (in reverse), no need to fill them in twice.</div>
       </div>
-      <div class="error-text" id="err-1">請選擇日期與時間（日期需為今天以後），若選擇來回請完整填寫回程日期、時間與航班編號（需不早於去程）。<span class="en">Please select a date and time (today or later). If Round Trip is selected, also fill in the return date, time, and flight number (not earlier than the outbound trip).</span></div>
+      <div class="error-text" id="err-0">請完整填寫姓名、電話（至少 8 碼）與用車日期時間；若選擇來回，請完整填寫回程日期、時間與航班編號（不可早於去程）。<span class="en">Please enter your name, phone number (min. 8 digits), and travel date &amp; time. If Round Trip is selected, also complete the return date, time, and flight number (not earlier than the outbound trip).</span></div>
     </div>
-
-    <!-- STEP 2: pickup location -->
-    <div class="step" data-step="2">
-      <div class="step-eyebrow">STEP 03</div>
-      <div class="step-title">上車地點</div>
-      <div class="step-title-en">Pick-up Location</div>
+    <!-- STEP 1: pickup + dropoff location -->
+    <div class="step" data-step="1">
+      <div class="step-eyebrow">STEP 02</div>
+      <div class="step-title">上車與下車地點</div>
+      <div class="step-title-en">Pick-up &amp; Drop-off Locations</div>
       <div class="field">
         <label>上車類型<span class="en">Pick-up Type</span></label>
         <div class="pill-group" id="pickupTypeGroup">
@@ -267,14 +257,6 @@
         </div>
       </div>
       <div class="subfield" id="pickupCustomFields"></div>
-      <div class="error-text" id="err-2">請選擇上車類型並完整填寫地點資訊（機場接機需填寫航班編號）。<span class="en">Please select a pick-up type and complete the location details (flight number required for airport pick-up).</span></div>
-    </div>
-
-    <!-- STEP 3: dropoff location -->
-    <div class="step" data-step="3">
-      <div class="step-eyebrow">STEP 04</div>
-      <div class="step-title">下車地點</div>
-      <div class="step-title-en">Drop-off Location</div>
       <div class="field">
         <label>下車類型<span class="en">Drop-off Type</span></label>
         <div class="pill-group" id="dropoffTypeGroup">
@@ -307,14 +289,13 @@
           <input type="text" id="f-return-waypoint" placeholder="例如：中途停靠超商 / e.g. a convenience store on the way">
         </div>
       </div>
-      <div class="error-text" id="err-3">請選擇下車類型並完整填寫地點資訊（機場送機需填寫航班編號）。<span class="en">Please select a drop-off type and complete the location details (flight number required for airport drop-off).</span></div>
+      <div class="error-text" id="err-1">請選擇上車與下車類型並完整填寫地點資訊（機場接送需填寫航班編號）。<span class="en">Please select pick-up and drop-off types and complete the location details (flight number required for airport pick-up/drop-off).</span></div>
     </div>
-
-    <!-- STEP 4: pax / luggage -->
-    <div class="step" data-step="4">
-      <div class="step-eyebrow">STEP 05</div>
-      <div class="step-title">人數與行李</div>
-      <div class="step-title-en">Passengers &amp; Luggage</div>
+    <!-- STEP 2: pax / luggage / vehicle / add-ons -->
+    <div class="step" data-step="2">
+      <div class="step-eyebrow">STEP 03</div>
+      <div class="step-title">人數、行李、車輛與加購</div>
+      <div class="step-title-en">Passengers, Luggage, Vehicle &amp; Add-ons</div>
       <div class="field">
         <label>搭乘人數<span class="en">Number of Passengers</span></label>
         <select id="f-pax">
@@ -325,26 +306,10 @@
         <label>行李尺寸與數量（可複選）<span class="en">Luggage Size &amp; Quantity (select any)</span></label>
         <div id="luggageStepperGroup"></div>
       </div>
-      <div class="error-text" id="err-4">請選擇人數，並至少設定一件行李。<span class="en">Please select the number of passengers and at least one piece of luggage.</span></div>
-    </div>
-
-    <!-- STEP 5: vehicle -->
-    <div class="step" data-step="5">
-      <div class="step-eyebrow">STEP 06</div>
-      <div class="step-title">選擇車輛</div>
-      <div class="step-title-en">Select Vehicle</div>
       <div class="field" style="margin-bottom:0;">
         <label>車型<span class="en">Vehicle Type</span></label>
         <div id="vehicleTypeGroup"></div>
       </div>
-      <div class="error-text" id="err-5">請選擇車型。<span class="en">Please select a vehicle type.</span></div>
-    </div>
-
-    <!-- STEP 6: addons -->
-    <div class="step" data-step="6">
-      <div class="step-eyebrow">STEP 07</div>
-      <div class="step-title">附加服務（可複選）</div>
-      <div class="step-title-en">Add-on Services (select any)</div>
       <div class="field">
         <label>座椅加購（可選數量，NT$200／個）<span class="en">Seat Add-ons (quantity, NT$200 each)</span></label>
         <div id="addonStepperGroup"></div>
@@ -363,12 +328,10 @@
         <label>免費偏好設定<span class="en">Free Preferences</span></label>
         <div class="pill-group" id="addonFreeGroup"></div>
       </div>
-      <div class="error-text" id="err-6">已選擇舉牌接機，請輸入舉牌內容。<span class="en">You selected Name Sign Pick-up — please enter the sign text.</span></div>
+      <div class="error-text" id="err-2">請選擇人數、至少一件行李、車型；若已選擇舉牌接機，請輸入舉牌內容。<span class="en">Please select the number of passengers, at least one piece of luggage, and a vehicle type. If Name Sign Pick-up is selected, also enter the sign text.</span></div>
     </div>
-
-    <!-- STEP 7: review -->
-    <div class="step" data-step="7">
-      <div class="step-eyebrow">STEP 08</div>
+    <div class="step" data-step="3">
+      <div class="step-eyebrow">STEP 04</div>
       <div class="step-title">確認預約內容</div>
       <div class="step-title-en">Review &amp; Confirm</div>
 
@@ -436,7 +399,6 @@
       <div class="note">實際車資將由客服人員確認後回覆。<br>點擊「傳送到 LINE」將開啟 LINE 分享視窗，選擇聊天對象送出。</div>
       <div class="note-en">The actual fare will be confirmed by our staff.<br>Tapping "Send to LINE" opens the LINE share window so you can choose a recipient.</div>
     </div>
-
   </div>
 
   <div class="nav-row">
@@ -447,7 +409,7 @@
 </div>
 
 <script>
-  const STEP_NAMES = ["聯絡資訊 Contact","日期時間 Date & Time","上車地點 Pick-up","下車地點 Drop-off","人數行李 Pax & Baggage","車輛選擇 Vehicle","附加服務 Add-ons","確認送出 Review"];
+  const STEP_NAMES = ["聯絡與時間 Contact & Time","上下車地點 Locations","人數・行李・車輛 Details","確認送出 Review"];
   const TOTAL_STEPS = STEP_NAMES.length;
   let currentStep = 0;
 
@@ -1208,7 +1170,7 @@
         formData.signContent = '';
         const input = document.getElementById('f-signcontent');
         if(input) input.value = '';
-        showError(6, false);
+        showError(2, false);
       }
     }
   }
@@ -1262,49 +1224,47 @@
   }
 
   function validateStep(step){
+    // STEP 0：聯絡資訊 + 用車日期時間（含來回資訊）
     if(step===0){
       formData.name = document.getElementById('f-name').value.trim();
       formData.phone = document.getElementById('f-phone').value.trim();
-      const ok = formData.name.length>0 && formData.phone.replace(/\D/g,'').length>=8;
-      showError(0, !ok); return ok;
-    }
-    if(step===1){
+      const okContact = formData.name.length>0 && formData.phone.replace(/\D/g,'').length>=8;
+
       formData.date = document.getElementById('f-date').value;
       formData.time = document.getElementById('f-time').value;
-      let ok = !!formData.date && !!formData.time;
-      if(ok && formData.roundTrip){
+      let okTime = !!formData.date && !!formData.time;
+      if(okTime && formData.roundTrip){
         formData.returnDate = document.getElementById('f-return-date').value;
         formData.returnTime = document.getElementById('f-return-time').value;
         formData.returnFlight = document.getElementById('f-return-flight').value.trim();
         const hasReturn = !!formData.returnDate && !!formData.returnTime && !!formData.returnFlight;
         const notEarlier = hasReturn && (formData.returnDate > formData.date || (formData.returnDate === formData.date && formData.returnTime >= formData.time));
-        ok = hasReturn && notEarlier;
+        okTime = hasReturn && notEarlier;
       }
-      showError(1, !ok); return ok;
+      const ok = okContact && okTime;
+      showError(0, !ok); return ok;
     }
-    if(step===2){
-      let ok = false;
+    // STEP 1：上車地點 + 下車地點（含中途點）
+    if(step===1){
+      let okPickup = false;
       if(formData.pickupType==='airport'){
         formData.pAirport = document.getElementById('p-airport').value;
         formData.pTerminal = document.getElementById('p-terminal').value;
         formData.pFlight = document.getElementById('p-flight').value.trim();
-        ok = !!formData.pFlight;
+        okPickup = !!formData.pFlight;
       } else if(formData.pickupType==='custom'){
         collectLocation('p');
-        ok = !!formData.pCity && !!formData.pDistrict && (formData.pLandmark || formData.pAddress);
+        okPickup = !!formData.pCity && !!formData.pDistrict && (formData.pLandmark || formData.pAddress);
       }
-      showError(2, !ok); return ok;
-    }
-    if(step===3){
-      let ok = false;
+      let okDropoff = false;
       if(formData.dropoffType==='airport'){
         formData.dAirport = document.getElementById('d-airport').value;
         formData.dTerminal = document.getElementById('d-terminal').value;
         formData.dFlight = document.getElementById('d-flight').value.trim();
-        ok = !!formData.dFlight;
+        okDropoff = !!formData.dFlight;
       } else if(formData.dropoffType==='custom'){
         collectLocation('d');
-        ok = !!formData.dCity && !!formData.dDistrict && (formData.dLandmark || formData.dAddress);
+        okDropoff = !!formData.dCity && !!formData.dDistrict && (formData.dLandmark || formData.dAddress);
       }
       const waypointInput = document.getElementById('f-waypoint');
       formData.waypoint = waypointInput ? waypointInput.value.trim() : '';
@@ -1314,22 +1274,19 @@
       } else {
         formData.returnWaypoint = '';
       }
-      showError(3, !ok); return ok;
+      const ok = okPickup && okDropoff;
+      showError(1, !ok); return ok;
     }
-    if(step===4){
+    // STEP 2：人數 + 行李 + 車輛 + 加購（含舉牌內容）
+    if(step===2){
       formData.pax = paxSelect.value;
       const totalLuggage = Object.values(formData.luggage).reduce((a,b)=>a+b,0);
-      const ok = !!formData.pax && totalLuggage>0;
-      showError(4, !ok); return ok;
-    }
-    if(step===5){
-      const ok = !!formData.vehicleType;
-      showError(5, !ok); return ok;
-    }
-    if(step===6){
+      const okPaxLuggage = !!formData.pax && totalLuggage>0;
+      const okVehicle = !!formData.vehicleType;
       formData.signContent = document.getElementById('f-signcontent') ? document.getElementById('f-signcontent').value.trim() : '';
-      const ok = !formData.addons.sign || formData.signContent.length>0;
-      showError(6, !ok); return ok;
+      const okAddons = !formData.addons.sign || formData.signContent.length>0;
+      const ok = okPaxLuggage && okVehicle && okAddons;
+      showError(2, !ok); return ok;
     }
     return true;
   }
