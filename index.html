@@ -1457,6 +1457,7 @@
   }
 
   // ---------- Flex Message（卡片式收據，傳到 LINE 會變成美化卡片）----------
+  // OLA AIRPORT EXPRESS 品牌配色：藏青 #122A43 ・ 金 #C9A15A ・ 米杏 #F8F5EF
   function flexRow(label, value, opts){
     opts = opts || {};
     return {
@@ -1464,14 +1465,14 @@
       layout: "horizontal",
       spacing: "sm",
       contents: [
-        { type:"text", text: label, color:"#8B94A7", size:"xs", flex:2, wrap:true },
-        { type:"text", text: (value || '—'), color: opts.highlight ? "#FFB454" : "#EDEFF5",
+        { type:"text", text: label, color:"#8B93A0", size:"xs", flex:2, wrap:true },
+        { type:"text", text: (value || '—'), color: opts.highlight ? "#B8863C" : "#1E2A38",
           size:"xs", flex:3, align:"end", wrap:true, weight: opts.highlight ? "bold" : "regular" }
       ]
     };
   }
   function flexSeparator(){
-    return { type:"separator", color:"#233252", margin:"lg" };
+    return { type:"separator", color:"#E3DCC9", margin:"lg" };
   }
   function flexAddonsSection(items){
     if(!items || !items.length){
@@ -1482,7 +1483,7 @@
       layout: "horizontal",
       spacing: "sm",
       contents: [
-        { type:"text", text:"附加服務", color:"#8B94A7", size:"sm", flex:2 },
+        { type:"text", text:"附加服務", color:"#8B93A0", size:"sm", flex:2 },
         {
           type: "box",
           layout: "vertical",
@@ -1491,7 +1492,7 @@
           contents: items.map(t => ({
             type: "text",
             text: t,
-            color: "#EDEFF5",
+            color: "#1E2A38",
             size: "sm",
             align: "end",
             wrap: true
@@ -1529,7 +1530,7 @@
 
       bodyContents.push(
         flexSeparator(),
-        { type:"text", text:"▍去程" + (trip ? '（' + trip.tripType + '）' : ''), weight:"bold", size:"sm", color:"#FFB454", margin:"md", wrap:true },
+        { type:"text", text:"▍去程" + (trip ? '（' + trip.tripType + '）' : ''), weight:"bold", size:"sm", color:"#B8863C", margin:"md", wrap:true },
         flexRow("日期／時間", (formData.date || '') + ' ' + (formData.time || '')),
         flexRow("上車 Pick-up", pickupText + (outboundAirportSide === 'pickup' && outboundFlight ? '（航班 ' + outboundFlight + '）' : ''))
       );
@@ -1541,7 +1542,7 @@
 
       bodyContents.push(
         flexSeparator(),
-        { type:"text", text:"▍回程" + (returnCtx ? '（' + returnCtx.tripType + '）' : ''), weight:"bold", size:"sm", color:"#2DD4BF", margin:"md", wrap:true },
+        { type:"text", text:"▍回程" + (returnCtx ? '（' + returnCtx.tripType + '）' : ''), weight:"bold", size:"sm", color:"#5C8F80", margin:"md", wrap:true },
         flexRow("日期／時間", (formData.returnDate || '') + ' ' + (formData.returnTime || '')),
         flexRow("上車 Pick-up", returnPickupText() + (returnAirportSide === 'pickup' && formData.returnFlight ? '（航班 ' + formData.returnFlight + '）' : ''))
       );
@@ -1579,23 +1580,24 @@
 
     return {
       type: "flex",
-      altText: "機場接送預約" + (formData.roundTrip ? '・來回' : '') + "｜" + (formData.name || '') + '｜' + (formData.date || '') + ' ' + (formData.time || ''),
+      altText: "OLA AIRPORT EXPRESS｜機場接送預約" + (formData.roundTrip ? '・來回' : '') + "｜" + (formData.name || '') + '｜' + (formData.date || '') + ' ' + (formData.time || ''),
       contents: {
         type: "bubble",
         header: {
           type: "box",
           layout: "vertical",
-          backgroundColor: "#FFB454",
+          backgroundColor: "#122A43",
           paddingAll: "16px",
           contents: [
-            { type:"text", text:"機場接送預約" + (formData.roundTrip ? '（來回）' : ''), weight:"bold", size:"lg", color:"#1A1300", wrap:true },
-            { type:"text", text: tripLabel, size:"sm", color:"#1A1300", margin:"xs", wrap:true }
+            { type:"text", text:"OLA AIRPORT EXPRESS", weight:"bold", style:"italic", size:"sm", color:"#C9A15A", wrap:true },
+            { type:"text", text:"機場接送預約" + (formData.roundTrip ? '（來回）' : ''), weight:"bold", size:"lg", color:"#FFFFFF", margin:"sm", wrap:true },
+            { type:"text", text: tripLabel, size:"sm", color:"#C7D0DC", margin:"xs", wrap:true }
           ]
         },
         body: {
           type: "box",
           layout: "vertical",
-          backgroundColor: "#111C30",
+          backgroundColor: "#F8F5EF",
           paddingAll: "16px",
           spacing: "md",
           contents: bodyContents
@@ -1603,13 +1605,13 @@
         footer: {
           type: "box",
           layout: "vertical",
-          backgroundColor: "#0B1220",
+          backgroundColor: "#F1EBDD",
           paddingAll: "14px",
           spacing: "xs",
           contents: [
-            { type:"text", text:"＊實際車資將由客服人員確認後回覆", size:"xxs", color:"#5C6478", wrap:true, margin:"md" },
+            { type:"text", text:"＊實際車資將由客服人員確認後回覆", size:"xxs", color:"#8B93A0", wrap:true, margin:"md" },
             flexSeparator(),
-            { type:"text", text:"由機場接送預約系統送出", size:"xxs", color:"#5C6478", align:"center", margin:"md", wrap:true }
+            { type:"text", text:"OLA AIRPORT EXPRESS ・ Fly. Arrive. Relax.", size:"xxs", color:"#8B93A0", align:"center", margin:"md", wrap:true }
           ]
         }
       }
