@@ -129,6 +129,14 @@
   .pill .en{ display:block; font-size:10px; opacity:0.85; font-weight:400; margin-top:1px; }
 
   .subfield{ display:none; margin-top:12px; padding:15px; background:var(--cream); border:1px solid var(--border); border-radius:14px; }
+
+  /* ---- 常用地址 ---- */
+  .common-addr-row{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+  .common-addr-chip{ display:flex; align-items:center; gap:6px; background:var(--white); border:1.5px solid var(--border); border-radius:20px; padding:6px 6px 6px 13px; font-size:12.5px; font-weight:600; color:var(--ink); cursor:pointer; transition:all .15s ease; }
+  .common-addr-chip:hover{ border-color:var(--gold); }
+  .common-addr-chip .chip-del{ display:flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; color:var(--muted); font-size:10px; }
+  .common-addr-chip .chip-del:hover{ background:var(--navy); color:#fff; }
+  .save-common-link{ display:inline-block; margin:8px 0 4px; font-size:12px; color:var(--gold); font-weight:600; text-decoration:underline; cursor:pointer; }
   .subfield.show{display:block;}
 
   .vehicle-card{
@@ -279,6 +287,10 @@
         <div style="font-size:11px; color:var(--muted); margin-top:10px; line-height:1.6;">回程將自動沿用您接下來填寫的上／下車地點（方向對調），不需重複填寫。<br>Your return trip will automatically reuse the pick-up/drop-off locations you enter next (in reverse), no need to fill them in twice.</div>
       </div>
       <div class="error-text" id="err-0">請完整填寫姓名、電話（至少 8 碼）與用車日期時間；若選擇來回，請完整填寫回程日期、時間與航班編號（不可早於去程）。<span class="en">Please enter your name, phone number (min. 8 digits), and travel date &amp; time. If Round Trip is selected, also complete the return date, time, and flight number (not earlier than the outbound trip).</span></div>
+      <div id="savedProfileNote" style="display:none; margin-top:10px; font-size:11.5px; color:var(--muted);">
+        💾 已自動帶入上次填寫的聯絡資訊　<a href="#" id="clearSavedProfile" style="color:var(--gold); text-decoration:underline;">清除重填</a>
+        <span class="en" style="display:block; margin-top:2px;">Auto-filled from your last visit — tap to clear</span>
+      </div>
     </div>
     <!-- STEP 1: pickup + dropoff location -->
     <div class="step" data-step="1">
@@ -378,7 +390,14 @@
         <label>免費偏好設定<span class="en">Free Preferences</span></label>
         <div class="pill-group" id="addonFreeGroup"></div>
       </div>
-      <div class="error-text" id="err-2">請選擇人數、至少一件行李、車型；若已選擇舉牌接機，請輸入舉牌內容。<span class="en">Please select the number of passengers, at least one piece of luggage, and a vehicle type. If Name Sign Pick-up is selected, also enter the sign text.</span></div>
+      <div class="field" style="margin-top:16px; margin-bottom:0;">
+        <label>付款方式<span class="en">Payment Method</span></label>
+        <div class="pill-group" id="paymentMethodGroup">
+          <div class="pill" data-value="現金">現金<span class="en">Cash</span></div>
+          <div class="pill" data-value="轉帳">轉帳<span class="en">Bank Transfer</span></div>
+        </div>
+      </div>
+      <div class="error-text" id="err-2">請選擇人數、至少一件行李、車型與付款方式；若已選擇舉牌接機，請輸入舉牌內容。<span class="en">Please select the number of passengers, at least one piece of luggage, vehicle type, and payment method. If Name Sign Pick-up is selected, also enter the sign text.</span></div>
     </div>
     <div class="step" data-step="3">
       <div class="step-eyebrow">STEP 04</div>
@@ -412,6 +431,7 @@
             <div class="pass-item"><div class="k">PAX 人數</div><div class="v mono" id="pass-pax">—</div></div>
             <div class="pass-item full"><div class="k">BAGGAGE 行李</div><div class="v" id="pass-baggage">—</div></div>
             <div class="pass-item full"><div class="k">ADD-ONS 附加服務</div><div class="v" id="pass-addons">—</div></div>
+            <div class="pass-item full"><div class="k">PAYMENT 付款方式</div><div class="v" id="pass-payment">—</div></div>
             <div class="pass-item full" id="pass-signcontent-wrap" style="display:none;"><div class="k">SIGN 舉牌內容</div><div class="v" id="pass-signcontent">—</div></div>
           </div>
         </div>
@@ -978,7 +998,7 @@
     pickupType:"", pAirport:"桃園國際機場", pTerminal:"第一航廈", pFlight:"", pCity:"", pDistrict:"", pLandmark:"", pAddress:"",
     dropoffType:"", dAirport:"桃園國際機場", dTerminal:"第一航廈", dFlight:"", dCity:"", dDistrict:"", dLandmark:"", dAddress:"", waypoint:"", returnWaypoint:"",
     pax:"", luggage:{},
-    vehicleType:"", addons:{}, addonQty:{}, signContent:"", price:0
+    vehicleType:"", addons:{}, addonQty:{}, signContent:"", price:0, paymentMethod:""
   };
   LUGGAGE_SIZES.forEach(s=>formData.luggage[s]=0);
   ADDONS_PAID.concat(ADDONS_FREE).forEach(a=>formData.addons[a.id]=false);
@@ -1011,8 +1031,75 @@
     paxSelect.appendChild(opt);
   }
 
+  // ---------- 常用地址：儲存後下次可一鍵帶入 ----------
+  const COMMON_ADDR_KEY = 'ola_airport_common_addresses';
+  function loadCommonAddresses(){
+    try{
+      const raw = localStorage.getItem(COMMON_ADDR_KEY);
+      return raw ? JSON.parse(raw) : [];
+    }catch(e){ return []; }
+  }
+  function saveCommonAddresses(list){
+    try{ localStorage.setItem(COMMON_ADDR_KEY, JSON.stringify(list)); }catch(e){}
+  }
+  function addCommonAddress(entry){
+    const list = loadCommonAddresses();
+    const isDup = list.some(x => x.city===entry.city && x.district===entry.district && x.landmark===entry.landmark && x.address===entry.address);
+    if(isDup) return;
+    list.unshift(entry);
+    if(list.length>6) list.length = 6;
+    saveCommonAddresses(list);
+    renderCommonChips('p');
+    renderCommonChips('d');
+  }
+  function removeCommonAddress(idx){
+    const list = loadCommonAddresses();
+    list.splice(idx,1);
+    saveCommonAddresses(list);
+    renderCommonChips('p');
+    renderCommonChips('d');
+  }
+  function fillLocationFromCommon(prefix, entry){
+    const citySel = document.getElementById(prefix+'-city');
+    const distSel = document.getElementById(prefix+'-district');
+    const landInput = document.getElementById(prefix+'-landmark');
+    const addrInput = document.getElementById(prefix+'-address');
+    citySel.value = entry.city || '';
+    citySel.dispatchEvent(new Event('change'));
+    distSel.value = entry.district || '';
+    distSel.dispatchEvent(new Event('change'));
+    landInput.value = entry.landmark || '';
+    addrInput.value = entry.address || '';
+  }
+  function renderCommonChips(prefix){
+    const container = document.getElementById(prefix+'-common-addr');
+    if(!container) return;
+    const list = loadCommonAddresses();
+    if(!list.length){ container.innerHTML = ''; container.style.display = 'none'; return; }
+    container.style.display = 'flex';
+    container.innerHTML = list.map((item, idx) =>
+      '<div class="common-addr-chip" data-idx="'+idx+'">'+
+        '<span class="chip-label">📍 '+item.label+'</span>'+
+        '<span class="chip-del" data-idx="'+idx+'">✕</span>'+
+      '</div>'
+    ).join('');
+    container.querySelectorAll('.common-addr-chip').forEach(chip=>{
+      chip.addEventListener('click', (e)=>{
+        if(e.target.classList.contains('chip-del')){
+          e.stopPropagation();
+          removeCommonAddress(parseInt(e.target.dataset.idx,10));
+          return;
+        }
+        const idx = parseInt(chip.dataset.idx,10);
+        const list2 = loadCommonAddresses();
+        if(list2[idx]) fillLocationFromCommon(prefix, list2[idx]);
+      });
+    });
+  }
+
   function buildLocationPicker(container, prefix){
     container.innerHTML =
+      '<div class="common-addr-row" id="'+prefix+'-common-addr" style="display:none;"></div>' +
       '<div class="field"><label>縣市<span class="en">City / County</span></label>' +
         '<select id="'+prefix+'-city"><option value="">請選擇縣市 / Select city or county</option>' +
           Object.keys(DISTRICTS).map(c=>'<option value="'+c+'">'+c+'</option>').join('') +
@@ -1022,7 +1109,8 @@
         '<input type="text" id="'+prefix+'-landmark" list="'+prefix+'-landmarkList" placeholder="例如：台北車站 / e.g. Taipei Main Station">' +
         '<datalist id="'+prefix+'-landmarkList"></datalist></div>' +
       '<div class="field" style="margin-bottom:0;"><label>詳細地址（選填）<span class="en">Detailed Address (optional)</span></label>' +
-        '<input type="text" id="'+prefix+'-address" placeholder="例如：忠孝東路四段 1 號 / e.g. street address"></div>';
+        '<input type="text" id="'+prefix+'-address" placeholder="例如：忠孝東路四段 1 號 / e.g. street address"></div>' +
+      '<a href="#" class="save-common-link" id="'+prefix+'-save-common">💾 存為常用地址 / Save as Favorite Address</a>';
 
     const citySel = document.getElementById(prefix+'-city');
     const distSel = document.getElementById(prefix+'-district');
@@ -1037,6 +1125,22 @@
       const opts = (LANDMARKS[distSel.value]||[]).filter(Boolean);
       landList.innerHTML = opts.map(l=>'<option value="'+l+'"></option>').join('');
     });
+
+    document.getElementById(prefix+'-save-common').addEventListener('click', (e)=>{
+      e.preventDefault();
+      const city = citySel.value, district = distSel.value;
+      const landmark = landInput.value.trim();
+      const address = document.getElementById(prefix+'-address').value.trim();
+      if(!city || !district){
+        alert('請先選擇縣市與行政區，再儲存常用地址喔。\nPlease select city and district first.');
+        return;
+      }
+      const label = window.prompt('幫這個地址取個好記的名字（例如：家、公司）\nName this address (e.g. Home, Office)', landmark || (city+district));
+      if(label === null) return;
+      addCommonAddress({ label: label.trim() || (city+district), city, district, landmark, address });
+    });
+
+    renderCommonChips(prefix);
   }
   buildLocationPicker(document.getElementById('pickupCustomFields'), 'p');
   buildLocationPicker(document.getElementById('dropoffCustomFields'), 'd');
@@ -1227,6 +1331,16 @@
   addonGroup.addEventListener('click', toggleAddon);
   addonFreeGroup.addEventListener('click', toggleAddon);
 
+  const paymentMethodGroup = document.getElementById('paymentMethodGroup');
+  paymentMethodGroup.addEventListener('click', e=>{
+    const pill = e.target.closest('.pill');
+    if(!pill) return;
+    document.querySelectorAll('#paymentMethodGroup .pill').forEach(p=>p.classList.remove('selected'));
+    pill.classList.add('selected');
+    formData.paymentMethod = pill.dataset.value;
+    showError(2, false);
+  });
+
   function addonsPaidTotal(){
     const stepperTotal = ADDONS_STEPPER.reduce((sum,a)=>sum+(formData.addonQty[a.id]||0)*a.price, 0);
     const toggleTotal = ADDONS_PAID.filter(a=>formData.addons[a.id]).reduce((sum,a)=>sum+a.price,0);
@@ -1292,7 +1406,9 @@
         okTime = hasReturn && notEarlier;
       }
       const ok = okContact && okTime;
-      showError(0, !ok); return ok;
+      showError(0, !ok);
+      if(ok) saveProfile();
+      return ok;
     }
     // STEP 1：上車地點 + 下車地點（含中途點）
     if(step===1){
@@ -1327,7 +1443,7 @@
       const ok = okPickup && okDropoff;
       showError(1, !ok); return ok;
     }
-    // STEP 2：人數 + 行李 + 車輛 + 加購（含舉牌內容）
+    // STEP 2：人數 + 行李 + 車輛 + 加購（含舉牌內容與付款方式）
     if(step===2){
       formData.pax = paxSelect.value;
       const totalLuggage = Object.values(formData.luggage).reduce((a,b)=>a+b,0);
@@ -1335,7 +1451,8 @@
       const okVehicle = !!formData.vehicleType;
       formData.signContent = document.getElementById('f-signcontent') ? document.getElementById('f-signcontent').value.trim() : '';
       const okAddons = !formData.addons.sign || formData.signContent.length>0;
-      const ok = okPaxLuggage && okVehicle && okAddons;
+      const okPayment = !!formData.paymentMethod;
+      const ok = okPaxLuggage && okVehicle && okAddons && okPayment;
       showError(2, !ok); return ok;
     }
     return true;
@@ -1398,6 +1515,7 @@
     document.getElementById('pass-baggage').textContent = luggageTotal()+' 件（'+luggageText()+'）';
     const addons = addonsList();
     document.getElementById('pass-addons').innerHTML = addons.length ? addons.join('<br>') : '無';
+    document.getElementById('pass-payment').textContent = formData.paymentMethod || '—';
     const signContent = signContentLine();
     document.getElementById('pass-signcontent-wrap').style.display = signContent ? '' : 'none';
     document.getElementById('pass-signcontent').textContent = signContent || '—';
@@ -1519,6 +1637,7 @@
     if (addonsLine) bodyContents.push(flexRow("附加服務", addonsLine));
     const signContent = signContentLine();
     if (signContent) bodyContents.push(flexRow("舉牌內容", signContent));
+    bodyContents.push(flexRow("付款方式", formData.paymentMethod || '—'));
 
     if (formData.roundTrip) {
       const pickupText = shortLocation('p', formData.pickupType, formData.pTerminal, formData.pAirport);
@@ -1642,6 +1761,7 @@
     if (signContent) {
       lines.push("舉牌內容 Sign Text：" + signContent);
     }
+    lines.push("付款方式 Payment：" + (formData.paymentMethod || '—'));
     lines.push("");
 
     if (formData.roundTrip) {
@@ -1745,7 +1865,44 @@
         });
       }
     }
+
+    const savedProfile = loadProfile();
+    if(savedProfile){
+      document.getElementById('f-name').value = savedProfile.name || '';
+      document.getElementById('f-phone').value = savedProfile.phone || '';
+      formData.name = savedProfile.name || '';
+      formData.phone = savedProfile.phone || '';
+      document.getElementById('savedProfileNote').style.display = 'block';
+    }
+    document.getElementById('clearSavedProfile').addEventListener('click', function(e){
+      e.preventDefault();
+      clearProfile();
+    });
+
     showStep(0);
+  }
+
+  // ---------- 記住我：儲存姓名與電話，下次自動帶入 ----------
+  const PROFILE_KEY = 'ola_airport_profile';
+  function saveProfile(){
+    try{
+      if(formData.name && formData.phone){
+        localStorage.setItem(PROFILE_KEY, JSON.stringify({ name: formData.name, phone: formData.phone }));
+      }
+    }catch(e){ /* localStorage 不可用時安靜略過 */ }
+  }
+  function loadProfile(){
+    try{
+      const raw = localStorage.getItem(PROFILE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    }catch(e){ return null; }
+  }
+  function clearProfile(){
+    try{ localStorage.removeItem(PROFILE_KEY); }catch(e){}
+    document.getElementById('f-name').value = '';
+    document.getElementById('f-phone').value = '';
+    formData.name = ''; formData.phone = '';
+    document.getElementById('savedProfileNote').style.display = 'none';
   }
 
   init();
