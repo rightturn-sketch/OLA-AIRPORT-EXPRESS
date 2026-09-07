@@ -120,6 +120,56 @@
   input:focus, select:focus{ border-color:var(--gold); box-shadow:0 0 0 3px rgba(201,161,90,0.18); }
   input::placeholder{color:var(--muted);}
 
+  /* ---- 滾動式時間選擇器 ---- */
+  input.time-input{
+    cursor:pointer; caret-color:transparent;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><circle cx='8' cy='8' r='6.5' stroke='%23122A43' stroke-width='1.4' fill='none'/><path d='M8 4.6V8l2.6 1.6' stroke='%23122A43' stroke-width='1.4' fill='none' stroke-linecap='round'/></svg>");
+    background-repeat:no-repeat; background-position:right 13px center; padding-right:38px;
+  }
+  .tp-overlay{
+    position:fixed; inset:0; background:rgba(10,27,44,0.5); z-index:999;
+    display:none; align-items:flex-end; justify-content:center;
+  }
+  .tp-overlay.show{display:flex;}
+  .tp-sheet{
+    width:100%; max-width:480px; background:var(--white);
+    border-radius:22px 22px 0 0; padding:14px 20px 26px;
+    box-shadow:0 -14px 34px rgba(18,42,67,0.22);
+    animation:tpSlideUp .25s ease;
+  }
+  @keyframes tpSlideUp{ from{transform:translateY(24px); opacity:0;} to{transform:translateY(0); opacity:1;} }
+  .tp-header{ display:flex; align-items:center; justify-content:space-between; padding-bottom:10px; margin-bottom:2px; }
+  .tp-title{ font-family:var(--font-display); font-size:14.5px; font-weight:700; color:var(--ink); text-align:center; flex:1; }
+  .tp-title .en{ display:block; font-size:10px; font-weight:500; color:var(--muted); margin-top:1px; }
+  .tp-btn{ border:none; background:none; font-size:14px; font-weight:700; padding:8px 6px; cursor:pointer; font-family:var(--font-body); }
+  .tp-btn.tp-cancel{ color:var(--muted); }
+  .tp-btn.tp-confirm{ color:var(--navy); }
+  .tp-wheels{ position:relative; display:flex; align-items:center; justify-content:center; height:220px; margin-top:4px; }
+  .tp-highlight{
+    position:absolute; left:0; right:0; top:50%; height:44px; transform:translateY(-50%);
+    pointer-events:none; z-index:0;
+    border-top:1px solid var(--border); border-bottom:1px solid var(--border);
+  }
+  .tp-col{
+    position:relative; z-index:1; width:76px; height:220px; overflow-y:scroll;
+    scroll-snap-type:y mandatory; -webkit-overflow-scrolling:touch;
+    scrollbar-width:none; -ms-overflow-style:none;
+    -webkit-mask-image:linear-gradient(to bottom, transparent 0, #000 34%, #000 66%, transparent 100%);
+    mask-image:linear-gradient(to bottom, transparent 0, #000 34%, #000 66%, transparent 100%);
+  }
+  .tp-col::-webkit-scrollbar{display:none;}
+  .tp-item{
+    height:44px; line-height:44px; text-align:center; scroll-snap-align:center;
+    font-family:var(--font-body); font-size:21px; font-weight:400; color:var(--muted);
+    transition:color .1s ease, font-weight .1s ease;
+  }
+  .tp-item.tp-active{ color:var(--navy); font-weight:600; }
+  .tp-colon{ font-family:var(--font-body); font-size:21px; font-weight:600; color:var(--navy); padding:0 4px; z-index:1; }
+  .tp-unit{ font-size:11px; color:var(--muted); text-align:center; margin-top:6px; font-weight:600; letter-spacing:0.5px; }
+  .tp-units-row{ display:flex; justify-content:center; gap:0; }
+  .tp-units-row span{ width:76px; }
+  .tp-units-row .tp-colon-spacer{ width:20px; }
+
   .pill-group{display:flex; flex-wrap:wrap; gap:8px;}
   .pill{
     padding:9px 15px; border-radius:20px; border:1.5px solid var(--border); background:var(--cream);
@@ -478,6 +528,29 @@
   <div class="footer-sign">OLA AIRPORT EXPRESS ・ Fly. Arrive. Relax.</div>
 
 </div>
+
+<!-- 滾動式 24 小時制時間選擇器 -->
+<div class="tp-overlay" id="tpOverlay">
+  <div class="tp-sheet">
+    <div class="tp-header">
+      <button type="button" class="tp-btn tp-cancel" id="tpCancelBtn">取消</button>
+      <div class="tp-title">選擇時間<span class="en">Select Time (24H)</span></div>
+      <button type="button" class="tp-btn tp-confirm" id="tpConfirmBtn">確定</button>
+    </div>
+    <div class="tp-wheels">
+      <div class="tp-highlight"></div>
+      <div class="tp-col" id="tpHourCol"></div>
+      <div class="tp-colon">:</div>
+      <div class="tp-col" id="tpMinuteCol"></div>
+    </div>
+    <div class="tp-units-row">
+      <span class="tp-unit">時 Hour</span>
+      <span class="tp-colon-spacer"></span>
+      <span class="tp-unit">分 Min</span>
+    </div>
+  </div>
+</div>
+
 <script>
   const STEP_NAMES = ["聯絡與時間 Contact & Time","上下車地點 Locations","人數・行李・車輛 Details","確認送出 Review"];
   const TOTAL_STEPS = STEP_NAMES.length;
@@ -1879,7 +1952,26 @@
       clearProfile();
     });
 
+    setupTimeInputs();
     showStep(0);
+  }
+
+  // ---------- 僅在 Android 裝置上，將原生時間選取器換成滾動式 24 小時制選擇器 ----------
+  // iPhone / iOS 保留原生 <input type="time"> 的滾輪式體驗，不做任何變動
+  function isAndroidDevice(){
+    return /Android/i.test(navigator.userAgent);
+  }
+  function setupTimeInputs(){
+    if (!isAndroidDevice()) return; // 非 Android（含 iPhone）維持原生時間選取器
+    ['f-time', 'f-return-time'].forEach(function(id){
+      const input = document.getElementById(id);
+      if (!input) return;
+      input.setAttribute('type', 'text');
+      input.setAttribute('readonly', 'readonly');
+      input.classList.add('time-input');
+      input.placeholder = '請選擇時間 Select Time';
+      input.addEventListener('click', function(){ openTimePicker(id); });
+    });
   }
 
   // ---------- 記住我：儲存姓名與電話，下次自動帶入 ----------
@@ -1904,6 +1996,112 @@
     formData.name = ''; formData.phone = '';
     document.getElementById('savedProfileNote').style.display = 'none';
   }
+
+  // ---------- 滾動式 24 小時制時間選擇器 ----------
+  const TP_ROW_H = 44;
+  const TP_PAD = 2; // 上下各留 2 格空白，讓首尾項目也能置中
+  let tpActiveFieldId = null;
+  let tpHour = 0;
+  let tpMinute = 0;
+  let tpScrollTimers = { hour: null, minute: null };
+
+  function tpPad2(n){ return String(n).padStart(2, '0'); }
+
+  function buildTimeColumn(container, count, key){
+    container.innerHTML = '';
+    const spacerTop = document.createElement('div');
+    spacerTop.style.height = (TP_PAD * TP_ROW_H) + 'px';
+    container.appendChild(spacerTop);
+    for(let i = 0; i < count; i++){
+      const item = document.createElement('div');
+      item.className = 'tp-item';
+      item.textContent = tpPad2(i);
+      item.dataset.value = i;
+      container.appendChild(item);
+    }
+    const spacerBottom = document.createElement('div');
+    spacerBottom.style.height = (TP_PAD * TP_ROW_H) + 'px';
+    container.appendChild(spacerBottom);
+
+    container.onscroll = function(){
+      clearTimeout(tpScrollTimers[key]);
+      tpScrollTimers[key] = setTimeout(function(){
+        tpSnapColumn(container, key, count);
+      }, 90);
+    };
+  }
+
+  function tpSnapColumn(container, key, count){
+    let value = Math.round(container.scrollTop / TP_ROW_H);
+    if(value < 0) value = 0;
+    if(value > count - 1) value = count - 1;
+    container.scrollTo({ top: value * TP_ROW_H, behavior: 'smooth' });
+    if(key === 'hour') tpHour = value; else tpMinute = value;
+    tpHighlightActive(container, value);
+  }
+
+  function tpHighlightActive(container, value){
+    const items = container.querySelectorAll('.tp-item');
+    items.forEach(function(el){
+      el.classList.toggle('tp-active', Number(el.dataset.value) === value);
+    });
+  }
+
+  function tpSetColumnValue(container, value){
+    container.scrollTop = value * TP_ROW_H;
+    tpHighlightActive(container, value);
+  }
+
+  function openTimePicker(fieldId){
+    tpActiveFieldId = fieldId;
+    const input = document.getElementById(fieldId);
+    const overlay = document.getElementById('tpOverlay');
+    const hourCol = document.getElementById('tpHourCol');
+    const minuteCol = document.getElementById('tpMinuteCol');
+
+    let h = 9, m = 0; // 預設時間 09:00
+    if(input && input.value && /^\d{2}:\d{2}$/.test(input.value)){
+      const parts = input.value.split(':');
+      h = parseInt(parts[0], 10);
+      m = parseInt(parts[1], 10);
+    } else {
+      const now = new Date();
+      h = now.getHours();
+      m = now.getMinutes();
+    }
+    tpHour = h;
+    tpMinute = m;
+
+    buildTimeColumn(hourCol, 24, 'hour');
+    buildTimeColumn(minuteCol, 60, 'minute');
+
+    overlay.classList.add('show');
+
+    // 先不使用平滑滾動直接定位，避免開啟時出現跑動畫的視覺跳動
+    requestAnimationFrame(function(){
+      tpSetColumnValue(hourCol, h);
+      tpSetColumnValue(minuteCol, m);
+    });
+  }
+
+  function closeTimePicker(){
+    document.getElementById('tpOverlay').classList.remove('show');
+    tpActiveFieldId = null;
+  }
+
+  function confirmTimePicker(){
+    if(tpActiveFieldId){
+      const input = document.getElementById(tpActiveFieldId);
+      if(input) input.value = tpPad2(tpHour) + ':' + tpPad2(tpMinute);
+    }
+    closeTimePicker();
+  }
+
+  document.getElementById('tpCancelBtn').addEventListener('click', closeTimePicker);
+  document.getElementById('tpConfirmBtn').addEventListener('click', confirmTimePicker);
+  document.getElementById('tpOverlay').addEventListener('click', function(e){
+    if(e.target.id === 'tpOverlay') closeTimePicker();
+  });
 
   init();
 
