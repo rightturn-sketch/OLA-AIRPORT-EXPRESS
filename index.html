@@ -396,10 +396,17 @@
         <input type="text" id="f-waypoint" placeholder="例如：中途停靠超商 / e.g. a convenience store on the way">
       </div>
       <div class="subfield" id="returnWaypointField" style="margin-top:14px;">
-        <div class="field" style="margin-bottom:0;">
+        <div class="field" style="margin-bottom:12px;">
           <label>回程中途點（選填）<span class="en">Return Stop-over (optional)</span></label>
           <input type="text" id="f-return-waypoint" placeholder="例如：中途停靠超商 / e.g. a convenience store on the way">
         </div>
+        <a href="#" id="returnSwapBtn" style="display:flex; align-items:center; gap:8px; padding:10px 13px; border-radius:12px; border:1.5px solid var(--gold); background:var(--gold-light); text-decoration:none;">
+          <span id="returnSwapIcon" style="font-size:17px; color:var(--navy); flex-shrink:0;">⇄</span>
+          <span style="flex:1; min-width:0;">
+            <span style="display:block; font-size:12.5px; font-weight:700; color:var(--navy);" id="returnSwapBtnLabel">交換回程上下車地點</span>
+            <span id="returnSwapDesc" style="display:block; font-size:10.5px; color:#5A4419; margin-top:2px; line-height:1.5;">若回程實際順序跟系統自動判斷相反，點這裡對調<span class="en" style="display:block;">Tap if the actual return order is reversed from the auto-suggested one</span></span>
+          </span>
+        </a>
       </div>
       <div class="error-text" id="err-1">請選擇上車與下車類型並完整填寫地點資訊（機場接送需填寫航班編號）。<span class="en">Please select pick-up and drop-off types and complete the location details (flight number required for airport pick-up/drop-off).</span></div>
     </div>
@@ -1070,6 +1077,7 @@
     roundTrip:false, returnDate:"", returnTime:"", returnFlight:"",
     pickupType:"", pAirport:"桃園國際機場", pTerminal:"第一航廈", pFlight:"", pCity:"", pDistrict:"", pLandmark:"", pAddress:"",
     dropoffType:"", dAirport:"桃園國際機場", dTerminal:"第一航廈", dFlight:"", dCity:"", dDistrict:"", dLandmark:"", dAddress:"", waypoint:"", returnWaypoint:"",
+    returnSwapped:false,
     pax:"", luggage:{},
     vehicleType:"", addons:{}, addonQty:{}, signContent:"", price:0, paymentMethod:""
   };
@@ -1243,6 +1251,8 @@
     formData.roundTrip = pill.dataset.value === 'roundtrip';
     document.getElementById('returnTripFields').classList.toggle('show', formData.roundTrip);
     document.getElementById('returnWaypointField').classList.toggle('show', formData.roundTrip);
+    formData.returnSwapped = false;
+    updateReturnSwapBtnUI();
     if(!formData.roundTrip){
       formData.returnWaypoint = '';
       const rw = document.getElementById('f-return-waypoint');
@@ -1256,6 +1266,8 @@
     document.querySelectorAll('#pickupTypeGroup .pill').forEach(p=>p.classList.remove('selected'));
     pill.classList.add('selected');
     formData.pickupType = pill.dataset.value;
+    formData.returnSwapped = false;
+    updateReturnSwapBtnUI();
     document.getElementById('pickupAirportFields').classList.toggle('show', formData.pickupType==='airport');
     document.getElementById('pickupCustomFields').classList.toggle('show', formData.pickupType==='custom');
   });
@@ -1265,6 +1277,8 @@
     document.querySelectorAll('#dropoffTypeGroup .pill').forEach(p=>p.classList.remove('selected'));
     pill.classList.add('selected');
     formData.dropoffType = pill.dataset.value;
+    formData.returnSwapped = false;
+    updateReturnSwapBtnUI();
     document.getElementById('dropoffAirportFields').classList.toggle('show', formData.dropoffType==='airport');
     document.getElementById('dropoffCustomFields').classList.toggle('show', formData.dropoffType==='custom');
   });
@@ -1316,25 +1330,48 @@
     }
     return null;
   }
-  // ---------- 來回接送：回程方向為去程的反向，沿用同一組地點資料 ----------
+  // ---------- 來回接送：回程方向預設為去程的反向，沿用同一組地點資料 ----------
+  // 若自動對調的結果不符合實際路線（例如回程並非單純原路折返），
+  // 可透過 formData.returnSwapped 讓使用者手動再對調一次上車／下車地點。
+  function getReturnLocationInfo(){
+    const ctx = getTripContext();
+    if(!ctx) return null;
+    let pickupText, dropoffText, pickupIsAirport;
+    if(ctx.tripType === '接機'){
+      // 去程：機場 → 指定地址，預設回程：指定地址 → 機場
+      pickupText = shortLocation('d', 'custom');
+      dropoffText = shortLocation('p', 'airport', formData.pTerminal, formData.pAirport);
+      pickupIsAirport = false;
+    } else {
+      // 去程：指定地址 → 機場，預設回程：機場 → 指定地址
+      pickupText = shortLocation('d', 'airport', formData.dTerminal, formData.dAirport);
+      dropoffText = shortLocation('p', 'custom');
+      pickupIsAirport = true;
+    }
+    if(formData.returnSwapped){
+      return { pickupText: dropoffText, dropoffText: pickupText, pickupIsAirport: !pickupIsAirport };
+    }
+    return { pickupText, dropoffText, pickupIsAirport };
+  }
   function getReturnTripContext(){
     const ctx = getTripContext();
     if(!ctx) return null;
-    return { tripType: ctx.tripType==='接機' ? '送機' : '接機', city:ctx.city, district:ctx.district, airport:ctx.airport };
+    const defaultReturnType = ctx.tripType==='接機' ? '送機' : '接機';
+    const tripType = formData.returnSwapped ? ctx.tripType : defaultReturnType;
+    return { tripType, city:ctx.city, district:ctx.district, airport:ctx.airport };
   }
   function returnPickupText(){
-    const ctx = getTripContext();
-    if(!ctx) return '—';
-    return ctx.tripType === '接機'
-      ? shortLocation('d', 'custom')
-      : shortLocation('d', 'airport', formData.dTerminal, formData.dAirport);
+    const info = getReturnLocationInfo();
+    return info ? info.pickupText : '—';
   }
   function returnDropoffText(){
-    const ctx = getTripContext();
-    if(!ctx) return '—';
-    return ctx.tripType === '接機'
-      ? shortLocation('p', 'airport', formData.pTerminal, formData.pAirport)
-      : shortLocation('p', 'custom');
+    const info = getReturnLocationInfo();
+    return info ? info.dropoffText : '—';
+  }
+  function computeReturnAirportSide(){
+    const info = getReturnLocationInfo();
+    if(!info) return null;
+    return info.pickupIsAirport ? 'pickup' : 'dropoff';
   }
   function selectVehicleType(type){
     formData.vehicleType = type;
@@ -1616,6 +1653,26 @@
       returnSection.style.display = 'none';
     }
   }
+  function updateReturnSwapBtnUI(){
+    const swapBtn = document.getElementById('returnSwapBtn');
+    const swapLabel = document.getElementById('returnSwapBtnLabel');
+    const swapIcon = document.getElementById('returnSwapIcon');
+    const swapDesc = document.getElementById('returnSwapDesc');
+    if(!swapBtn || !swapLabel) return;
+    const on = formData.returnSwapped;
+    swapBtn.style.background = on ? 'var(--navy)' : 'var(--gold-light)';
+    swapBtn.style.borderColor = on ? 'var(--navy)' : 'var(--gold)';
+    if(swapIcon) swapIcon.style.color = on ? 'var(--gold-light)' : 'var(--navy)';
+    swapLabel.style.color = on ? 'var(--gold-light)' : 'var(--navy)';
+    if(swapDesc) swapDesc.style.color = on ? 'var(--gold-light)' : '#5A4419';
+    swapLabel.textContent = on ? '已對調（點此還原）' : '交換回程上下車地點';
+  }
+  document.getElementById('returnSwapBtn').addEventListener('click', function(e){
+    e.preventDefault();
+    formData.returnSwapped = !formData.returnSwapped;
+    updateReturnSwapBtnUI();
+    renderSummary();
+  });
 
   const VEHICLE_LABELS = {
     "五人座轎車": "小車（五人座轎車）Compact (5-Seat Sedan)",
@@ -1718,7 +1775,7 @@
       const outboundAirportSide = formData.pickupType === 'airport' ? 'pickup' : 'dropoff';
       const outboundFlight = outboundAirportSide === 'pickup' ? formData.pFlight : formData.dFlight;
       const returnCtx = getReturnTripContext();
-      const returnAirportSide = outboundAirportSide === 'pickup' ? 'dropoff' : 'pickup';
+      const returnAirportSide = computeReturnAirportSide();
 
       bodyContents.push(
         flexSeparator(),
@@ -1843,7 +1900,7 @@
       const outboundAirportSide = formData.pickupType === 'airport' ? 'pickup' : 'dropoff';
       const outboundFlight = outboundAirportSide === 'pickup' ? formData.pFlight : formData.dFlight;
       const returnCtx = getReturnTripContext();
-      const returnAirportSide = outboundAirportSide === 'pickup' ? 'dropoff' : 'pickup';
+      const returnAirportSide = computeReturnAirportSide();
 
       lines.push("▍去程 Outbound" + (tripCtx ? '（' + tripCtx.tripType + '）' : ''));
       lines.push("用車 Time：" + (formData.date || '') + ' ' + (formData.time || ''));
@@ -1953,6 +2010,7 @@
     });
 
     setupTimeInputs();
+    updateReturnSwapBtnUI();
     showStep(0);
   }
 
