@@ -400,11 +400,11 @@
           <label>回程中途點（選填）<span class="en">Return Stop-over (optional)</span></label>
           <input type="text" id="f-return-waypoint" placeholder="例如：中途停靠超商 / e.g. a convenience store on the way">
         </div>
-        <a href="#" id="returnSwapBtn" style="display:flex; align-items:center; gap:8px; padding:10px 13px; border-radius:12px; border:1.5px solid var(--gold); background:var(--gold-light); text-decoration:none;">
+        <a href="#" id="returnSwapBtn" style="display:none; align-items:center; gap:8px; padding:10px 13px; border-radius:12px; border:1.5px solid var(--gold); background:var(--gold-light); text-decoration:none;">
           <span id="returnSwapIcon" style="font-size:17px; color:var(--navy); flex-shrink:0;">⇄</span>
           <span style="flex:1; min-width:0;">
-            <span style="display:block; font-size:12.5px; font-weight:700; color:var(--navy);" id="returnSwapBtnLabel">交換回程上下車地點</span>
-            <span id="returnSwapDesc" style="display:block; font-size:10.5px; color:#5A4419; margin-top:2px; line-height:1.5;">若回程實際順序跟系統自動判斷相反，點這裡對調<span class="en" style="display:block;">Tap if the actual return order is reversed from the auto-suggested one</span></span>
+            <span style="display:block; font-size:12.5px; font-weight:700; color:var(--navy);" id="returnSwapBtnLabel">對調「中途點」與「下車地點」順序</span>
+            <span id="returnSwapDesc" style="display:block; font-size:10.5px; color:#5A4419; margin-top:2px; line-height:1.5;">例：回程機場出發後，若其實是先到「下車地點」再到「中途點」，可點此對調兩者順序<span class="en" style="display:block;">Tap if the return trip actually visits the drop-off address first, then the stop-over</span></span>
           </span>
         </a>
       </div>
@@ -1331,33 +1331,40 @@
     return null;
   }
   // ---------- 來回接送：回程方向預設為去程的反向，沿用同一組地點資料 ----------
-  // 若自動對調的結果不符合實際路線（例如回程並非單純原路折返），
-  // 可透過 formData.returnSwapped 讓使用者手動再對調一次上車／下車地點。
+  // 回程「上車地點」永遠固定＝去程的下車地點，不受對調影響（上車地點不會有歧義）。
+  // 真正可能對調的是「回程中途點」與「回程下車地點」這兩個非機場端的地址角色：
+  // 例如回程機場出發後，究竟是先到木柵、最後回萬華；還是先到萬華、最後才到木柵。
+  // 只有當回程的下車地點是「指定地址」（而非機場）時，這個對調才有意義；
+  // 若回程下車地點本身就是機場（送機／有航班資訊），則不提供對調，避免弄亂航班欄位。
   function getReturnLocationInfo(){
     const ctx = getTripContext();
     if(!ctx) return null;
-    let pickupText, dropoffText, pickupIsAirport;
+    let pickupText, autoDropoffText, pickupIsAirport;
     if(ctx.tripType === '接機'){
-      // 去程：機場 → 指定地址，預設回程：指定地址 → 機場
+      // 去程：機場 → 指定地址，回程：指定地址 → 機場（回程下車＝機場，不可對調）
       pickupText = shortLocation('d', 'custom');
-      dropoffText = shortLocation('p', 'airport', formData.pTerminal, formData.pAirport);
+      autoDropoffText = shortLocation('p', 'airport', formData.pTerminal, formData.pAirport);
       pickupIsAirport = false;
     } else {
-      // 去程：指定地址 → 機場，預設回程：機場 → 指定地址
+      // 去程：指定地址 → 機場，回程：機場 → 指定地址（回程下車＝指定地址，可與中途點對調）
       pickupText = shortLocation('d', 'airport', formData.dTerminal, formData.dAirport);
-      dropoffText = shortLocation('p', 'custom');
+      autoDropoffText = shortLocation('p', 'custom');
       pickupIsAirport = true;
     }
-    if(formData.returnSwapped){
-      return { pickupText: dropoffText, dropoffText: pickupText, pickupIsAirport: !pickupIsAirport };
+    const swappable = pickupIsAirport; // 回程下車地點非機場時才允許對調
+    const waypointText = formData.returnWaypoint || '';
+    let midText = waypointText;
+    let dropoffText = autoDropoffText;
+    if(swappable && formData.returnSwapped){
+      midText = autoDropoffText;
+      dropoffText = waypointText;
     }
-    return { pickupText, dropoffText, pickupIsAirport };
+    return { pickupText, dropoffText, midText, pickupIsAirport, swappable };
   }
   function getReturnTripContext(){
     const ctx = getTripContext();
     if(!ctx) return null;
-    const defaultReturnType = ctx.tripType==='接機' ? '送機' : '接機';
-    const tripType = formData.returnSwapped ? ctx.tripType : defaultReturnType;
+    const tripType = ctx.tripType==='接機' ? '送機' : '接機';
     return { tripType, city:ctx.city, district:ctx.district, airport:ctx.airport };
   }
   function returnPickupText(){
@@ -1367,6 +1374,10 @@
   function returnDropoffText(){
     const info = getReturnLocationInfo();
     return info ? info.dropoffText : '—';
+  }
+  function returnMidStopText(){
+    const info = getReturnLocationInfo();
+    return info ? info.midText : (formData.returnWaypoint || '');
   }
   function computeReturnAirportSide(){
     const info = getReturnLocationInfo();
@@ -1639,8 +1650,8 @@
       document.getElementById('pass-return-to').textContent = returnDropoffText();
       document.getElementById('pass-return-date').textContent = formData.returnDate || '—';
       document.getElementById('pass-return-time').textContent = formData.returnTime || '—';
-      document.getElementById('pass-return-waypoint-wrap').style.display = formData.returnWaypoint ? '' : 'none';
-      document.getElementById('pass-return-waypoint').textContent = formData.returnWaypoint || '—';
+      document.getElementById('pass-return-waypoint-wrap').style.display = returnMidStopText() ? '' : 'none';
+      document.getElementById('pass-return-waypoint').textContent = returnMidStopText() || '—';
       const flightRow = document.getElementById('pass-return-flight-row');
       if(formData.returnFlight){
         flightRow.style.display = '';
@@ -1659,13 +1670,17 @@
     const swapIcon = document.getElementById('returnSwapIcon');
     const swapDesc = document.getElementById('returnSwapDesc');
     if(!swapBtn || !swapLabel) return;
+    const info = getReturnLocationInfo();
+    const swappable = !!(info && info.swappable);
+    swapBtn.style.display = (formData.roundTrip && swappable) ? 'flex' : 'none';
+    if(!swappable) return;
     const on = formData.returnSwapped;
     swapBtn.style.background = on ? 'var(--navy)' : 'var(--gold-light)';
     swapBtn.style.borderColor = on ? 'var(--navy)' : 'var(--gold)';
     if(swapIcon) swapIcon.style.color = on ? 'var(--gold-light)' : 'var(--navy)';
     swapLabel.style.color = on ? 'var(--gold-light)' : 'var(--navy)';
     if(swapDesc) swapDesc.style.color = on ? 'var(--gold-light)' : '#5A4419';
-    swapLabel.textContent = on ? '已對調（點此還原）' : '交換回程上下車地點';
+    swapLabel.textContent = on ? '已對調（點此還原）：先到下車地點，中途點才是最後一站' : '對調「中途點」與「下車地點」順序';
   }
   document.getElementById('returnSwapBtn').addEventListener('click', function(e){
     e.preventDefault();
@@ -1795,7 +1810,7 @@
         flexRow("日期／時間", (formData.returnDate || '') + ' ' + (formData.returnTime || '')),
         flexRow("上車 Pick-up", returnPickupText() + (returnAirportSide === 'pickup' && formData.returnFlight ? '（航班 ' + formData.returnFlight + '）' : ''))
       );
-      if (formData.returnWaypoint) bodyContents.push(flexRow("中途 Stop-over", formData.returnWaypoint));
+      if (returnMidStopText()) bodyContents.push(flexRow("中途 Stop-over", returnMidStopText()));
       bodyContents.push(
         flexRow("下車 Drop-off", returnDropoffText() + (returnAirportSide === 'dropoff' && formData.returnFlight ? '（航班 ' + formData.returnFlight + '）' : '')),
         flexRow("回程車資", "請洽客服報價")
@@ -1912,7 +1927,7 @@
       lines.push("▍回程 Return" + (returnCtx ? '（' + returnCtx.tripType + '）' : ''));
       lines.push("用車 Time：" + (formData.returnDate || '') + ' ' + (formData.returnTime || ''));
       lines.push("上車 Pick-up：" + returnPickupText() + (returnAirportSide === 'pickup' && formData.returnFlight ? '（航班 Flight ' + formData.returnFlight + '）' : ''));
-      if (formData.returnWaypoint) lines.push("中途 Stop-over：" + formData.returnWaypoint);
+      if (returnMidStopText()) lines.push("中途 Stop-over：" + returnMidStopText());
       lines.push("下車 Drop-off：" + returnDropoffText() + (returnAirportSide === 'dropoff' && formData.returnFlight ? '（航班 Flight ' + formData.returnFlight + '）' : ''));
       lines.push("");
       lines.push("去程／回程車資 Fare：請洽客服報價 Contact us for quote");
