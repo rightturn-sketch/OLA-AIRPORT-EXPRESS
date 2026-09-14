@@ -455,9 +455,27 @@
       <div class="step-title-en">Passengers, Luggage, Vehicle &amp; Add-ons</div>
       <div class="field">
         <label>搭乘人數<span class="en">Number of Passengers</span></label>
-        <select id="f-pax">
-          <option value="">請選擇 / Select</option>
-        </select>
+        <div id="paxStepperGroup">
+          <div class="lug-row" data-pax="adult">
+            <div class="lug-name">大人<span class="en" style="display:block; font-size:11px; font-weight:400; color:var(--muted); margin-top:2px;">Adults (12+)</span></div>
+            <div class="lug-stepper">
+              <button type="button" class="lug-btn" data-action="minus">−</button>
+              <div class="lug-count" id="paxAdultCount">1</div>
+              <button type="button" class="lug-btn" data-action="plus">＋</button>
+            </div>
+          </div>
+          <div class="lug-row" data-pax="child">
+            <div class="lug-name">小孩<span class="en" style="display:block; font-size:11px; font-weight:400; color:var(--muted); margin-top:2px;">Children (2-11)</span></div>
+            <div class="lug-stepper">
+              <button type="button" class="lug-btn" data-action="minus">−</button>
+              <div class="lug-count" id="paxChildCount">0</div>
+              <button type="button" class="lug-btn" data-action="plus">＋</button>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:8px; font-size:12.5px; color:var(--muted); font-weight:600;">
+          共 <span id="paxTotalDisplay" style="color:var(--navy);">1</span> 人　<span style="font-weight:400;">Total Passengers</span>
+        </div>
       </div>
       <div class="field">
         <label>行李尺寸與數量（可複選）<span class="en">Luggage Size &amp; Quantity (select any)</span></label>
@@ -1117,7 +1135,7 @@
     dropoffType:"", dAirport:"桃園國際機場", dTerminal:"第一航廈", dFlight:"", dCity:"", dDistrict:"", dLandmark:"", dAddress:"", waypoint:"", returnWaypoint:"",
     rPickupType:"", rpAirport:"桃園國際機場", rpTerminal:"第一航廈", rpFlight:"", rpCity:"", rpDistrict:"", rpLandmark:"", rpAddress:"",
     rDropoffType:"", rdAirport:"桃園國際機場", rdTerminal:"第一航廈", rdFlight:"", rdCity:"", rdDistrict:"", rdLandmark:"", rdAddress:"",
-    pax:"", luggage:{},
+    paxAdult:1, paxChild:0, luggage:{},
     vehicleType:"", addons:{}, addonQty:{}, signContent:"", price:0, paymentMethod:""
   };
   LUGGAGE_SIZES.forEach(s=>formData.luggage[s]=0);
@@ -1144,12 +1162,27 @@
     updateProgress();
   }
 
-  const paxSelect = document.getElementById('f-pax');
-  for(let i=1;i<=9;i++){
-    const opt = document.createElement('option');
-    opt.value = i; opt.textContent = i+' 人 ('+i+(i===1?' Person)':' People)');
-    paxSelect.appendChild(opt);
+  const PAX_MIN = { adult:1, child:0 };
+  const PAX_MAX = 9;
+  function paxTotal(){ return (formData.paxAdult||0) + (formData.paxChild||0); }
+  function updatePaxDisplay(){
+    document.getElementById('paxAdultCount').textContent = formData.paxAdult;
+    document.getElementById('paxChildCount').textContent = formData.paxChild;
+    document.getElementById('paxTotalDisplay').textContent = paxTotal();
   }
+  document.getElementById('paxStepperGroup').addEventListener('click', e=>{
+    const btn = e.target.closest('.lug-btn');
+    if(!btn) return;
+    const row = btn.closest('.lug-row');
+    const type = row.dataset.pax;
+    const key = type === 'adult' ? 'paxAdult' : 'paxChild';
+    let val = formData[key];
+    if(btn.dataset.action === 'plus') val = Math.min(PAX_MAX, val+1);
+    else val = Math.max(PAX_MIN[type], val-1);
+    formData[key] = val;
+    updatePaxDisplay();
+  });
+  updatePaxDisplay();
 
   // ---------- 常用地址：儲存後下次可一鍵帶入 ----------
   const COMMON_ADDR_KEY = 'ola_airport_common_addresses';
@@ -1622,9 +1655,8 @@
     }
     // STEP 2：人數 + 行李 + 車輛 + 加購（含舉牌內容與付款方式）
     if(step===2){
-      formData.pax = paxSelect.value;
       const totalLuggage = Object.values(formData.luggage).reduce((a,b)=>a+b,0);
-      const okPaxLuggage = !!formData.pax && totalLuggage>0;
+      const okPaxLuggage = paxTotal()>0 && formData.paxAdult>=1 && totalLuggage>0;
       const okVehicle = !!formData.vehicleType;
       formData.signContent = document.getElementById('f-signcontent') ? document.getElementById('f-signcontent').value.trim() : '';
       const okAddons = !formData.addons.sign || formData.signContent.length>0;
@@ -1688,7 +1720,9 @@
     document.getElementById('pass-waypoint-wrap').style.display = formData.waypoint ? '' : 'none';
     document.getElementById('pass-waypoint').textContent = formData.waypoint || '—';
     document.getElementById('pass-vehicle').textContent = formData.vehicleType || '—';
-    document.getElementById('pass-pax').textContent = formData.pax ? formData.pax+' 人' : '—';
+    document.getElementById('pass-pax').textContent = paxTotal()>0
+      ? ('大人 '+formData.paxAdult+(formData.paxChild>0 ? '・小孩 '+formData.paxChild : '')+'（共 '+paxTotal()+' 人）')
+      : '—';
     document.getElementById('pass-baggage').textContent = luggageTotal()+' 件（'+luggageText()+'）';
     const addons = addonsList();
     document.getElementById('pass-addons').innerHTML = addons.length ? addons.join('<br>') : '無';
@@ -1807,7 +1841,7 @@
       flexRow("訂單編號", formData.orderNumber || "—"),
       flexRow("姓名", formData.name),
       flexRow("電話", formData.phone),
-      flexRow("人數", (formData.pax || 1) + " 人"),
+      flexRow("人數", formData.paxAdult + " 大人" + (formData.paxChild>0 ? " + " + formData.paxChild + " 小孩" : "") + "（共 " + paxTotal() + " 人）"),
       flexRow("行李", luggageTotal() + " 件（" + luggageText() + "）"),
       flexRow("車輛類型", vehicleLabel)
     ];
@@ -1926,7 +1960,7 @@
       "訂單編號 Order No：" + (formData.orderNumber || ''),
       "姓名 Name：" + (formData.name || ''),
       "電話 Phone：" + (formData.phone || ''),
-      "人數 Pax：" + (formData.pax || 1) + " 人 | 行李 Baggage：" + luggageTotal() + " 件（" + luggageText() + "）",
+      "人數 Pax：" + formData.paxAdult + " 大人 Adult" + (formData.paxChild>0 ? " + " + formData.paxChild + " 小孩 Child" : "") + "（共 " + paxTotal() + " 人 Total）" + " | 行李 Baggage：" + luggageTotal() + " 件（" + luggageText() + "）",
       "車輛類型 Vehicle：" + vehicleLabel
     ];
     const addons = addonsList();
